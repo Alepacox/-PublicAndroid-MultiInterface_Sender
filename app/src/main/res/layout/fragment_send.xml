@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/send_container"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context=".Send">
+
+    <com.stepstone.stepper.StepperLayout xmlns:android="http://schemas.android.com/apk/res/android"
+        xmlns:app="http://schemas.android.com/apk/res-auto"
+        android:id="@+id/stepperLayout"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        app:ms_activeStepColor="@color/colorAccent"
+        app:ms_stepperFeedbackType="disabled_bottom_navigation"
+        app:ms_stepperType="dots" />
+
+</FrameLayout>
