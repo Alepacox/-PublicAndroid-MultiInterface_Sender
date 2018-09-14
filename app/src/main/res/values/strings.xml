@@ -7,7 +7,7 @@
 
     <!-- TODO: Remove or change this placeholder text -->
     <string name="hello_blank_fragment">Hello blank fragment</string>
-
+    <string name="field_empty">"Questo campo non può essere vuoto"</string>
     <string name="title_activity_splash_screen">SplashScreen</string>
 
     <string name="title_activity_receive_loading">Receive_loading</string>

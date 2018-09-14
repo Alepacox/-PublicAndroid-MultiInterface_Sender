@@ -7,7 +7,6 @@ import android.content.Context;
 import android.content.Intent;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
-import android.net.Uri;
 import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
 import android.os.AsyncTask;
@@ -16,13 +15,11 @@ import android.provider.Settings;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
 import android.support.v4.app.Fragment;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.CheckBox;
 import android.widget.CompoundButton;
-import android.widget.TextView;
 import android.widget.Toast;
 
 import org.json.JSONException;
@@ -33,12 +30,7 @@ import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.lang.reflect.Method;
 import java.net.HttpURLConnection;
-import java.net.Inet4Address;
-import java.net.InetAddress;
-import java.net.NetworkInterface;
-import java.net.SocketException;
 import java.net.URL;
-import java.util.Enumeration;
 import java.util.Locale;
 import java.util.concurrent.ExecutionException;
 
@@ -46,12 +38,12 @@ import java.util.concurrent.ExecutionException;
 /**
  * A simple {@link Fragment} subclass.
  * Activities that contain this fragment must implement the
- * {@link Receive_manual.OnFragmentInteractionListener} interface
+ * {@link } interface
  * to handle interaction events.
- * Use the {@link Receive_manual#newInstance} factory method to
+ * Use the {@link Receive_step_1#newInstance} factory method to
  * create an instance of this fragment.
  */
-public class Receive_manual extends Fragment {
+public class Receive_step_1 extends Fragment {
     // TODO: Rename parameter arguments, choose names that match
     // the fragment initialization parameters, e.g. ARG_ITEM_NUMBER
     private static final String ARG_PARAM1 = "param1";
@@ -65,9 +57,14 @@ public class Receive_manual extends Fragment {
     private String bluetoothName;
     private int ACTION_BT= 56;
 
-    private OnFragmentInteractionListener mListener;
+    public interface DataCommunication {
+        public void setInterfacesDetails(String mobileIp, String wifiIp, String bluetoothName);
+        public boolean getNoLoginMode();
+    }
 
-    public Receive_manual() {
+    private DataCommunication mListener;
+
+    public Receive_step_1() {
         // Required empty public constructor
     }
 
@@ -77,11 +74,11 @@ public class Receive_manual extends Fragment {
      *
      * @param param1 Parameter 1.
      * @param param2 Parameter 2.
-     * @return A new instance of fragment Receive_manual.
+     * @return A new instance of fragment Receive_step_1.
      */
     // TODO: Rename and change types and number of parameters
-    public static Receive_manual newInstance(String param1, String param2) {
-        Receive_manual fragment = new Receive_manual();
+    public static Receive_step_1 newInstance(String param1, String param2) {
+        Receive_step_1 fragment = new Receive_step_1();
         Bundle args = new Bundle();
         args.putString(ARG_PARAM1, param1);
         args.putString(ARG_PARAM2, param2);
@@ -102,7 +99,7 @@ public class Receive_manual extends Fragment {
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
         // Inflate the layout for this fragment
-        return inflater.inflate(R.layout.fragment_receive_manual, container, false);
+        return inflater.inflate(R.layout.fragment_receive_step_1, container, false);
     }
     @Override
     public void onViewCreated(View view, Bundle savedInstanceState) {
@@ -177,35 +174,41 @@ public class Receive_manual extends Fragment {
                 }
             }
         }));
-        FloatingActionButton doneButton= getActivity().findViewById(R.id.button_receive_manual_done);
+        FloatingActionButton doneButton= getActivity().findViewById(R.id.button_receive_interf_done);
         doneButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                Intent myIntent = new Intent(getActivity(), Receive_loading.class);
-                myIntent.putExtra("wifiIp", wifiIp);
-                myIntent.putExtra("mobileIp", mobileIp);
-                myIntent.putExtra("bluetoothName", bluetoothName);
-                getActivity().startActivity(myIntent);
+                if (wifiCheckbox.isChecked() || mobileCheckbox.isChecked() || bluetoothCheckbox.isChecked()) {
+                    mListener.setInterfacesDetails(mobileIp, wifiIp, bluetoothName);
+                    if(!mListener.getNoLoginMode()) {
+                        getActivity().getSupportFragmentManager().beginTransaction()
+                                .setCustomAnimations(R.anim.enter_from_right, R.anim.exit_to_left, R.anim.enter_from_left, R.anim.exit_to_right)
+                                .replace(R.id.receive_container, new Receive_step_2(), "")
+                                .addToBackStack(null)
+                                .commit();
+                    } else {
+                        Intent myIntent = new Intent(getActivity(), Receive_loading.class);
+                        myIntent.putExtra("mobileIp", mobileIp);
+                        myIntent.putExtra("wifiIp", wifiIp);
+                        myIntent.putExtra("bluetoothName", bluetoothName);
+                        myIntent.putExtra("receivingManual", true);
+                        getActivity().startActivity(myIntent);
+                    }
+                } else MainActivity.snackBarNav(getActivity(), R.id.receive_container,
+                        "Seleziona almeno un'interfaccia per continuare", Snackbar.LENGTH_LONG, 1);
             }
         });
 
     }
 
-    // TODO: Rename method, update argument and hook method into UI event
-    public void onButtonPressed(Uri uri) {
-        if (mListener != null) {
-            mListener.onFragmentInteraction(uri);
-        }
-    }
-
     @Override
     public void onAttach(Context context) {
         super.onAttach(context);
-        if (context instanceof OnFragmentInteractionListener) {
-            mListener = (OnFragmentInteractionListener) context;
+        if (context instanceof DataCommunication) {
+            mListener = (DataCommunication) context;
         } else {
             throw new RuntimeException(context.toString()
-                    + " must implement OnFragmentInteractionListener");
+                    + " must implement DataCommunication");
         }
     }
 
@@ -215,20 +218,6 @@ public class Receive_manual extends Fragment {
         mListener = null;
     }
 
-    /**
-     * This interface must be implemented by activities that contain this
-     * fragment to allow an interaction in this fragment to be communicated
-     * to the activity and potentially other fragments contained in that
-     * activity.
-     * <p>
-     * See the Android Training lesson <a href=
-     * "http://developer.android.com/training/basics/fragments/communicating.html"
-     * >Communicating with Other Fragments</a> for more information.
-     */
-    public interface OnFragmentInteractionListener {
-        // TODO: Update argument type and name
-        void onFragmentInteraction(Uri uri);
-    }
     public void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
         if (requestCode == ACTION_BT){

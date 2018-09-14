@@ -4,16 +4,16 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    tools:context=".Receive_manual">
+    tools:context=".Receive_step_1">
 
     <TextView
         android:id="@+id/textView13"
-        android:layout_width="wrap_content"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_marginEnd="8dp"
-        android:layout_marginStart="8dp"
+        android:layout_marginEnd="30dp"
+        android:layout_marginStart="30dp"
         android:layout_marginTop="24dp"
-        android:text="Modalità manuale"
+        android:text="Scegli le interfacce da utilizzare"
         android:textAlignment="center"
         android:textSize="18sp"
         android:textStyle="bold"
@@ -27,9 +27,9 @@
         android:layout_marginBottom="8dp"
         android:layout_marginEnd="10dp"
         android:layout_marginStart="10dp"
-        android:layout_marginTop="8dp"
+        android:layout_marginTop="16dp"
         android:gravity="center_horizontal"
-        app:layout_constraintBottom_toTopOf="@+id/button_receive_manual_done"
+        app:layout_constraintBottom_toTopOf="@+id/button_receive_interf_done"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintHorizontal_bias="0.0"
         app:layout_constraintStart_toStartOf="parent"
@@ -92,7 +92,7 @@
     </RelativeLayout>
 
     <android.support.design.widget.FloatingActionButton
-        android:id="@+id/button_receive_manual_done"
+        android:id="@+id/button_receive_interf_done"
         android:layout_width="58dp"
         android:layout_height="58dp"
         android:layout_marginBottom="32dp"

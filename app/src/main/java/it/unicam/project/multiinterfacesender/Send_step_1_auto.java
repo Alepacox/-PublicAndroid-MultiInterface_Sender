@@ -1,29 +1,29 @@
 package it.unicam.project.multiinterfacesender;
 
-
 import android.app.AlertDialog;
-import android.app.ProgressDialog;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.net.Uri;
 import android.os.Bundle;
 import android.support.v4.app.Fragment;
+import android.text.InputType;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
-import android.widget.ImageView;
+import android.widget.FrameLayout;
 
+import com.poovam.pinedittextfield.LinePinField;
 
 /**
  * A simple {@link Fragment} subclass.
  * Activities that contain this fragment must implement the
- * {@link Receive_auto.OnFragmentInteractionListener} interface
+ * {@link Send_step_1_auto.OnFragmentInteractionListener} interface
  * to handle interaction events.
- * Use the {@link Receive_auto#newInstance} factory method to
+ * Use the {@link Send_step_1_auto#newInstance} factory method to
  * create an instance of this fragment.
  */
-public class Receive_auto extends Fragment {
+public class Send_step_1_auto extends Fragment {
     // TODO: Rename parameter arguments, choose names that match
     // the fragment initialization parameters, e.g. ARG_ITEM_NUMBER
     private static final String ARG_PARAM1 = "param1";
@@ -35,7 +35,7 @@ public class Receive_auto extends Fragment {
 
     private OnFragmentInteractionListener mListener;
 
-    public Receive_auto() {
+    public Send_step_1_auto() {
         // Required empty public constructor
     }
 
@@ -45,11 +45,11 @@ public class Receive_auto extends Fragment {
      *
      * @param param1 Parameter 1.
      * @param param2 Parameter 2.
-     * @return A new instance of fragment Receive_auto.
+     * @return A new instance of fragment Send_step_1_auto.
      */
     // TODO: Rename and change types and number of parameters
-    public static Receive_auto newInstance(String param1, String param2) {
-        Receive_auto fragment = new Receive_auto();
+    public static Send_step_1_auto newInstance(String param1, String param2) {
+        Send_step_1_auto fragment = new Send_step_1_auto();
         Bundle args = new Bundle();
         args.putString(ARG_PARAM1, param1);
         args.putString(ARG_PARAM2, param2);
@@ -70,45 +70,59 @@ public class Receive_auto extends Fragment {
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
         // Inflate the layout for this fragment
-        return inflater.inflate(R.layout.fragment_receive_auto, container, false);
+        return inflater.inflate(R.layout.fragment_send_step_1_auto, container, false);
     }
     @Override
     public void onViewCreated(View view, Bundle savedInstanceState) {
-        ImageView buttonStart= getActivity().findViewById(R.id.button_generate_code);
-        buttonStart.setOnClickListener(new View.OnClickListener() {
+        Button buttonManual= getActivity().findViewById(R.id.button_send_manual);
+        buttonManual.setOnClickListener(new View.OnClickListener() {
             @Override
-            public void onClick(View v) {
+            public void onClick(View view) {
+                getActivity().getSupportFragmentManager().beginTransaction()
+                        .setCustomAnimations(R.anim.enter_from_right, R.anim.exit_to_left, R.anim.enter_from_left, R.anim.exit_to_right)
+                        .replace(R.id.send_container, new Send_step_1_manual(),"")
+                        .addToBackStack(null)
+                        .commit();
+            }
+        });
+
+        Button buttonConnect= getActivity().findViewById(R.id.button_next);
+        buttonConnect.setText("CONNETTI");
+        buttonConnect.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
                 AlertDialog.Builder alertDialog = new AlertDialog.Builder(getActivity());
-                alertDialog.setTitle("Il tuo codice è 000000");
+                alertDialog.setTitle("Codice di sicurezza");
+                alertDialog.setMessage("Inserisci il codice di sicurezza visualizzato sullo schermo del ricevente");
+
+                final LinePinField pinInput= new LinePinField(getActivity());
+                pinInput.setNumberOfFields(6);
+                pinInput.setInputType(InputType.TYPE_CLASS_NUMBER);
+                pinInput.setHighlightPaintColor(getActivity().getResources().getColor(R.color.sendPrimaryColor));
+                FrameLayout.LayoutParams params = new  FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+                pinInput.setLayoutParams(params);
+                alertDialog.setView(pinInput);
                 alertDialog.setIcon(R.mipmap.ic_launcher);
-                alertDialog.setPositiveButton("Ok",
+                alertDialog.setPositiveButton("Vai",
                         new DialogInterface.OnClickListener() {
                             public void onClick(DialogInterface dialog, int which) {
-                                ProgressDialog dialog2 = ProgressDialog.show(getActivity(), "",
-                                        "Attendi", true);
+                                getActivity().getSupportFragmentManager().beginTransaction()
+                                        .setCustomAnimations(R.anim.enter_from_right, R.anim.exit_to_left, R.anim.enter_from_left, R.anim.exit_to_right)
+                                        .replace(R.id.send_container, new Send_step_2(),"")
+                                        .addToBackStack(null)
+                                        .commit();
+                            }
+                        });
+
+                alertDialog.setNegativeButton("Annulla",
+                        new DialogInterface.OnClickListener() {
+                            public void onClick(DialogInterface dialog, int which) {
+                                dialog.cancel();
                             }
                         });
                 alertDialog.show();
             }
         });
-        Button buttonManual= getActivity().findViewById(R.id.button_receive_manual);
-        buttonManual.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                getActivity().getSupportFragmentManager().beginTransaction()
-                        .setCustomAnimations(R.anim.enter_from_right, R.anim.exit_to_left, R.anim.enter_from_left, R.anim.exit_to_right)
-                        .replace(R.id.receive_container, new Receive_manual(),"findThisFragment")
-                        .addToBackStack(null)
-                        .commit();
-            }
-        });
-    }
-
-    // TODO: Rename method, update argument and hook method into UI event
-    public void onButtonPressed(Uri uri) {
-        if (mListener != null) {
-            mListener.onFragmentInteraction(uri);
-        }
     }
 
     @Override
@@ -127,6 +141,7 @@ public class Receive_auto extends Fragment {
         super.onDetach();
         mListener = null;
     }
+
 
     /**
      * This interface must be implemented by activities that contain this

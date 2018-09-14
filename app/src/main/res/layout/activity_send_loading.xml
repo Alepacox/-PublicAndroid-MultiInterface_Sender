@@ -65,7 +65,7 @@
         wheel:layout_constraintEnd_toEndOf="@+id/progressBar_send_loading"
         wheel:layout_constraintStart_toStartOf="@+id/progressBar_send_loading"
         wheel:layout_constraintTop_toTopOf="@+id/progressBar_send_loading"
-        wheel:srcCompat="@drawable/circle" />
+        wheel:srcCompat="@drawable/circle_receive" />
 
     <TextView
         android:id="@+id/percentage_send_loading"
@@ -76,7 +76,7 @@
         android:layout_marginStart="8dp"
         android:layout_marginTop="8dp"
         android:text="0%"
-        android:textColor="@color/ms_white"
+        android:textColor="@android:color/white"
         android:textSize="36sp"
         wheel:layout_constraintBottom_toBottomOf="@+id/circle_send_loading"
         wheel:layout_constraintEnd_toEndOf="@+id/circle_send_loading"

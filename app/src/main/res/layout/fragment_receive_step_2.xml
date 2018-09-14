@@ -4,7 +4,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context=".Receive_auto">
+    tools:context=".Receive_step_2">
 
     <RelativeLayout
         android:layout_width="wrap_content"
@@ -23,16 +23,16 @@
             android:id="@+id/button_generate_code"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:src="@drawable/circle" />
+            android:src="@drawable/circle_receive" />
 
         <TextView
             android:id="@+id/textView4"
-            android:layout_width="76dp"
-            android:layout_height="wrap_content"
+            android:layout_width="108dp"
+            android:layout_height="77dp"
             android:layout_centerInParent="true"
-            android:text="Clicca per iniziare"
+            android:text="Genera codice connessione"
             android:textAlignment="center"
-            android:textColor="@color/ms_white"
+            android:textColor="@android:color/white"
             android:textSize="18sp"
             android:textStyle="bold" />
     </RelativeLayout>
@@ -76,7 +76,7 @@
         android:layout_marginStart="8dp"
         android:background="@color/colorAccent"
         android:text="Modalità manuale"
-        android:textColor="@color/ms_white"
+        android:textColor="@android:color/white"
         android:textSize="12sp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"

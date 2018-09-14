@@ -1,9 +1,7 @@
 package it.unicam.project.multiinterfacesender;
 
-import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.Intent;
-import android.graphics.Color;
 import android.net.Uri;
 import android.os.Build;
 import android.support.annotation.RequiresApi;
@@ -26,9 +24,10 @@ import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 
-public class MainActivity extends AppCompatActivity implements Receive.OnFragmentInteractionListener, Send_step_1.DataCommunication,
-        Send.OnFragmentInteractionListener, Send_step_2.DataCommunication, Send_step_3.OnFragmentInteractionListener, Receive_manual.OnFragmentInteractionListener,
-        Receive_auto.OnFragmentInteractionListener  {
+public class MainActivity extends AppCompatActivity implements Receive.DataCommunication, Send_step_1_manual.DataCommunication,
+        Send.DataCommunication, Send_step_2.OnFragmentInteractionListener,
+        Receive_step_1.DataCommunication,
+        Send_step_1_auto.OnFragmentInteractionListener, Receive_step_2.DataCommunication  {
 
     /**
      * The {@link android.support.v4.view.PagerAdapter} that will provide
@@ -42,9 +41,17 @@ public class MainActivity extends AppCompatActivity implements Receive.OnFragmen
     private TabLayout tabLayout;
     private AppBarLayout appbar;
     private Toolbar toolbar;
-    private boolean usingWifi=false;
-    private boolean usingMobile=false;
-    private boolean usingBluetooth=false;
+    private boolean noLogin;
+    private String deviceID;
+    //Sender variables
+    private boolean usingWifi;
+    private boolean usingMobile;
+    private boolean usingBluetooth;
+    private boolean firstTimeManual=true;
+    //Receiver variables
+    private String wifiIp;
+    private String mobileIp;
+    private String bluetoothName;
 
 
     /**
@@ -53,10 +60,14 @@ public class MainActivity extends AppCompatActivity implements Receive.OnFragmen
     private ViewPager mViewPager;
 
 
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        Intent myIntent= getIntent();
+        noLogin= myIntent.getBooleanExtra("nologin", true);
+        deviceID= myIntent.getStringExtra("deviceID");
         tabLayout = (TabLayout) findViewById(R.id.tabs);
         appbar= findViewById(R.id.appbar);
         toolbar = (Toolbar) findViewById(R.id.toolbar);
@@ -114,24 +125,35 @@ public class MainActivity extends AppCompatActivity implements Receive.OnFragmen
     }
 
     @Override
-    public void setUsingWifi(boolean value) {
-        this.usingWifi=value;
+    public void setInterfaces(boolean[] value) {
+        this.usingWifi=value[0];
+        this.usingMobile=value[1];
+        this.usingBluetooth=value[2];
     }
 
     @Override
-    public void setUsingMobile(boolean value) {
-        Log.e("HERE", String.valueOf(value));
-        this.usingMobile=value;
+    public boolean isTheFirstTimeManual() {
+        if(firstTimeManual){
+            firstTimeManual=false;
+            return true;
+        } else return false;
     }
 
     @Override
-    public void setUsingBluetooth(boolean value) {
-        this.usingBluetooth=value;
+    public void setInterfacesDetails(String mobileIp, String wifiIp, String bluetoothName) {
+        this.mobileIp=mobileIp;
+        this.wifiIp=wifiIp;
+        this.bluetoothName=bluetoothName;
     }
 
     @Override
-    public boolean[] getChoosenInterface() {
-        return new boolean[]{usingWifi, usingMobile, usingBluetooth};
+    public String[] getInterfacesDetails() {
+        return new String[]{mobileIp, wifiIp, bluetoothName};
+    }
+
+    @Override
+    public boolean getNoLoginMode() {
+        return noLogin;
     }
 
     /**
@@ -251,5 +273,10 @@ public class MainActivity extends AppCompatActivity implements Receive.OnFragmen
                     R.color.snackbar_background));
         }
         snackbar.show();
+    }
+
+    @Override
+    public void onBackPressed() {
+        super.onBackPressed();
     }
 }
