@@ -173,7 +173,7 @@ public class Send_device_list extends Fragment {
                                 @Override
                                 public void run() {
                                     Intent i = new Intent(getActivity(), Login.class);
-                                    Toast.makeText(getActivity(), R.string.session_expired, Toast.LENGTH_LONG);
+                                    Toast.makeText(getActivity(), R.string.session_expired, Toast.LENGTH_LONG).show();
                                     i.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
                                     startActivity(i);
                                 }
@@ -183,7 +183,7 @@ public class Send_device_list extends Fragment {
                         getActivity().runOnUiThread(new Runnable() {
                             @Override
                             public void run() {
-                                Toast.makeText(getActivity(), R.string.something_wrong, Toast.LENGTH_SHORT);
+                                Toast.makeText(getActivity(), R.string.something_wrong, Toast.LENGTH_SHORT).show();
                             }
                         });
                     }
@@ -192,7 +192,7 @@ public class Send_device_list extends Fragment {
                     getActivity().runOnUiThread(new Runnable() {
                         @Override
                         public void run() {
-                            Toast.makeText(getActivity(), R.string.something_wrong, Toast.LENGTH_SHORT);
+                            Toast.makeText(getActivity(), R.string.something_wrong, Toast.LENGTH_SHORT).show();
                         }
                     });
                 }

@@ -72,7 +72,7 @@ public class SplashScreen extends AppCompatActivity {
                     startActivity(i);
                 } else {
                     Intent i = new Intent(SplashScreen.this, Login.class);
-                    Toast.makeText(getApplicationContext(), R.string.session_expired, Toast.LENGTH_LONG);
+                    Toast.makeText(getApplicationContext(), R.string.session_expired, Toast.LENGTH_LONG).show();
                     startActivity(i);
                 }
             } else {

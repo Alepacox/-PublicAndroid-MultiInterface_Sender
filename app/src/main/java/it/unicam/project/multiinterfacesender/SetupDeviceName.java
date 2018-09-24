@@ -92,7 +92,6 @@ public class SetupDeviceName extends AppCompatActivity {
         try {
             String output = new SyncToServerTasks.NewDeviceTask(uToken, devicename).execute().get();
             if (output != null) {
-                Log.e("output", output.toString());
                 if (!output.equals("unauthorized")) {
                     if (!output.equals("duplicate")) {
                         JSONObject object = (JSONObject) new JSONTokener(output).nextValue();
