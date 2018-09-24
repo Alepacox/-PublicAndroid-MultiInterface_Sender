@@ -1,4 +1,4 @@
-package it.unicam.project.multiinterfacesender;
+package it.unicam.project.multiinterfacesender.Receive;
 
 
 import android.bluetooth.BluetoothAdapter;
@@ -33,6 +33,9 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.Locale;
 import java.util.concurrent.ExecutionException;
+
+import it.unicam.project.multiinterfacesender.MainActivity;
+import it.unicam.project.multiinterfacesender.R;
 
 
 /**

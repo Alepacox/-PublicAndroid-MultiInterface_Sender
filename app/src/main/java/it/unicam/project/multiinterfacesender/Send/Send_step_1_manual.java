@@ -1,4 +1,4 @@
-package it.unicam.project.multiinterfacesender;
+package it.unicam.project.multiinterfacesender.Send;
 
 
 import android.Manifest;
@@ -41,6 +41,9 @@ import net.cachapa.expandablelayout.ExpandableLayout;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+
+import it.unicam.project.multiinterfacesender.MainActivity;
+import it.unicam.project.multiinterfacesender.R;
 
 
 /**

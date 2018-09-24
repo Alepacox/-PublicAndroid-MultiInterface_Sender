@@ -1,4 +1,4 @@
-package it.unicam.project.multiinterfacesender;
+package it.unicam.project.multiinterfacesender.Receive;
 
 
 import android.content.Intent;
@@ -8,6 +8,8 @@ import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.TextView;
+
+import it.unicam.project.multiinterfacesender.R;
 
 
 public class Receive_loading extends AppCompatActivity {

@@ -1,4 +1,4 @@
-package it.unicam.project.multiinterfacesender;
+package it.unicam.project.multiinterfacesender.Send;
 
 
 import android.content.Context;
@@ -15,6 +15,9 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.TextView;
+
+import it.unicam.project.multiinterfacesender.MainActivity;
+import it.unicam.project.multiinterfacesender.R;
 
 
 /**

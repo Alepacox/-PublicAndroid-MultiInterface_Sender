@@ -17,17 +17,25 @@ import android.support.v4.app.FragmentManager;
 import android.support.v4.app.FragmentPagerAdapter;
 import android.support.v4.view.ViewPager;
 import android.os.Bundle;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 
+import it.unicam.project.multiinterfacesender.Receive.Receive;
+import it.unicam.project.multiinterfacesender.Receive.Receive_step_1;
+import it.unicam.project.multiinterfacesender.Receive.Receive_step_2;
+import it.unicam.project.multiinterfacesender.Send.Send;
+import it.unicam.project.multiinterfacesender.Send.Send_device_list;
+import it.unicam.project.multiinterfacesender.Send.Send_step_1_auto;
+import it.unicam.project.multiinterfacesender.Send.Send_step_1_manual;
+import it.unicam.project.multiinterfacesender.Send.Send_step_2;
+
 public class MainActivity extends AppCompatActivity implements Receive.DataCommunication, Send_step_1_manual.DataCommunication,
         Send.DataCommunication, Send_step_2.OnFragmentInteractionListener,
-        Receive_step_1.DataCommunication,
-        Send_step_1_auto.OnFragmentInteractionListener, Receive_step_2.DataCommunication  {
+        Receive_step_1.DataCommunication, Send_device_list.DataCommunication,
+        Send_step_1_auto.DataCommunication, Receive_step_2.DataCommunication  {
 
     /**
      * The {@link android.support.v4.view.PagerAdapter} that will provide
@@ -42,7 +50,11 @@ public class MainActivity extends AppCompatActivity implements Receive.DataCommu
     private AppBarLayout appbar;
     private Toolbar toolbar;
     private boolean noLogin;
-    private String deviceID;
+    //User details
+    private String username;
+    private String devicename;
+    private String uToken;
+    private String dToken;
     //Sender variables
     private boolean usingWifi;
     private boolean usingMobile;
@@ -67,7 +79,15 @@ public class MainActivity extends AppCompatActivity implements Receive.DataCommu
         setContentView(R.layout.activity_main);
         Intent myIntent= getIntent();
         noLogin= myIntent.getBooleanExtra("nologin", true);
-        deviceID= myIntent.getStringExtra("deviceID");
+        username = myIntent.getStringExtra("username");
+        devicename = myIntent.getStringExtra("devicename");
+        uToken= myIntent.getStringExtra("uToken");
+        dToken= myIntent.getStringExtra("dToken");
+        if(!noLogin){
+            RWStorage rw= new RWStorage(this);
+            rw.writeDeviceToken(dToken);
+            rw.writeUserToken(uToken);
+        }
         tabLayout = (TabLayout) findViewById(R.id.tabs);
         appbar= findViewById(R.id.appbar);
         toolbar = (Toolbar) findViewById(R.id.toolbar);
@@ -94,6 +114,7 @@ public class MainActivity extends AppCompatActivity implements Receive.DataCommu
 
             }
         });
+
     }
 
 
@@ -152,8 +173,23 @@ public class MainActivity extends AppCompatActivity implements Receive.DataCommu
     }
 
     @Override
+    public String getDeviceName() {
+        return devicename;
+    }
+
+    @Override
     public boolean getNoLoginMode() {
         return noLogin;
+    }
+
+    @Override
+    public void setChoosenDevice(String ID) {
+
+    }
+
+    @Override
+    public String getUToken() {
+        return uToken;
     }
 
     /**

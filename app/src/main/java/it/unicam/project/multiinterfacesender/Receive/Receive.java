@@ -1,13 +1,14 @@
-package it.unicam.project.multiinterfacesender;
+package it.unicam.project.multiinterfacesender.Receive;
 
 
 import android.content.Context;
-import android.net.Uri;
 import android.os.Bundle;
 import android.support.v4.app.Fragment;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+
+import it.unicam.project.multiinterfacesender.R;
 
 
 /**

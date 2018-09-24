@@ -5,7 +5,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@color/receivePrimaryColor"
-    tools:context=".Receive_loading">
+    tools:context=".Receive.Receive_loading">
 
     <ProgressBar
         android:id="@+id/progressBar_receive_loading"

@@ -6,7 +6,7 @@
     android:focusableInTouchMode="true"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context=".Send_step_1_manual">
+    tools:context=".Send.Send_step_1_manual">
 
     <TextView
         android:id="@+id/textView20"

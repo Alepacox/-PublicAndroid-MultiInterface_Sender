@@ -14,4 +14,10 @@
     <string name="dummy_button">Dummy Button</string>
     <string name="dummy_content">DUMMY\nCONTENT</string>
     <string name="off">Off</string>
+    <string name="something_wrong">Qualcosa è andato storto</string>
+    <string name="wrong_user_psw">Nome utente o password errati</string>
+    <string name="psws_not_matching">Le due password non combaciano</string>
+    <string name="user_already_picked">Username già utilizzato</string>
+    <string name="devicename_already_picked">Hai già un dispositivo con lo stesso nome</string>
+    <string name="session_expired">La tua sessione è scaduta, riesegui il login.</string>
 </resources>

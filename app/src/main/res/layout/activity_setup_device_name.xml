@@ -50,6 +50,7 @@
         android:layout_height="332dp"
         android:layout_marginStart="72dp"
         android:layout_marginTop="16dp"
+        app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="@+id/setup_done_button"
         app:layout_constraintTop_toTopOf="@+id/setup_done_button"
         app:srcCompat="@drawable/web_hi_res" />
