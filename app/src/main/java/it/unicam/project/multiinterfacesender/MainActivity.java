@@ -1,6 +1,7 @@
 package it.unicam.project.multiinterfacesender;
 
 import android.app.Activity;
+import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Build;
@@ -17,9 +18,11 @@ import android.support.v4.app.FragmentManager;
 import android.support.v4.app.FragmentPagerAdapter;
 import android.support.v4.view.ViewPager;
 import android.os.Bundle;
+import android.util.AttributeSet;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 
@@ -33,7 +36,7 @@ import it.unicam.project.multiinterfacesender.Send.Send_step_1_manual;
 import it.unicam.project.multiinterfacesender.Send.Send_step_2;
 
 public class MainActivity extends AppCompatActivity implements Receive.DataCommunication, Send_step_1_manual.DataCommunication,
-        Send.DataCommunication, Send_step_2.OnFragmentInteractionListener,
+        Send.DataCommunication, Send_step_2.DataCommunication,
         Receive_step_1.DataCommunication, Send_device_list.DataCommunication,
         Send_step_1_auto.DataCommunication, Receive_step_2.DataCommunication  {
 
@@ -49,6 +52,7 @@ public class MainActivity extends AppCompatActivity implements Receive.DataCommu
     private TabLayout tabLayout;
     private AppBarLayout appbar;
     private Toolbar toolbar;
+    private CustomViewPager mViewPager;
     private boolean noLogin;
     //User details
     private String username;
@@ -62,14 +66,8 @@ public class MainActivity extends AppCompatActivity implements Receive.DataCommu
     private boolean firstTimeManual=true;
     //Receiver variables
     private String wifiIp;
-    private String mobileIp;
+    private boolean mobileIp;
     private String bluetoothName;
-
-
-    /**
-     * The {@link ViewPager} that will host the section contents.
-     */
-    private ViewPager mViewPager;
 
 
 
@@ -92,7 +90,7 @@ public class MainActivity extends AppCompatActivity implements Receive.DataCommu
         appbar= findViewById(R.id.appbar);
         toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
-        mViewPager = (ViewPager) findViewById(R.id.container);
+        mViewPager = (CustomViewPager) findViewById(R.id.container);
         mViewPager.addOnPageChangeListener(new TabLayout.TabLayoutOnPageChangeListener(tabLayout));
         mSectionsPagerAdapter = new SectionsPagerAdapter(getSupportFragmentManager(), tabLayout.getTabCount());
         mViewPager.setAdapter(mSectionsPagerAdapter);
@@ -141,11 +139,6 @@ public class MainActivity extends AppCompatActivity implements Receive.DataCommu
     }
 
     @Override
-    public void onFragmentInteraction(Uri uri) {
-
-    }
-
-    @Override
     public void setInterfaces(boolean[] value) {
         this.usingWifi=value[0];
         this.usingMobile=value[1];
@@ -161,15 +154,15 @@ public class MainActivity extends AppCompatActivity implements Receive.DataCommu
     }
 
     @Override
-    public void setInterfacesDetails(String mobileIp, String wifiIp, String bluetoothName) {
+    public void setInterfacesDetails(boolean mobileIp, String wifiIp, String bluetoothName) {
         this.mobileIp=mobileIp;
         this.wifiIp=wifiIp;
         this.bluetoothName=bluetoothName;
     }
 
     @Override
-    public String[] getInterfacesDetails() {
-        return new String[]{mobileIp, wifiIp, bluetoothName};
+    public Object[] getInterfacesDetails() {
+        return new Object[]{mobileIp, wifiIp, bluetoothName};
     }
 
     @Override
@@ -183,49 +176,25 @@ public class MainActivity extends AppCompatActivity implements Receive.DataCommu
     }
 
     @Override
+    public void setSwipable(boolean swipable) {
+        this.mViewPager.setSwipeable(swipable);
+        if(swipable) {
+            this.tabLayout.setVisibility(View.VISIBLE);
+        } else this.tabLayout.setVisibility(View.INVISIBLE);
+    }
+
+    @Override
     public void setChoosenDevice(String ID) {
 
     }
-
     @Override
     public String getUToken() {
         return uToken;
     }
 
-    /**
-     * A placeholder fragment containing a simple view.
-     */
-    public static class PlaceholderFragment extends Fragment {
-        /**
-         * The fragment argument representing the section number for this
-         * fragment.
-         */
-        private static final String ARG_SECTION_NUMBER = "section_number";
-
-        public PlaceholderFragment() {
-        }
-
-        /**
-         * Returns a new instance of this fragment for the given section
-         * number.
-         */
-        public static PlaceholderFragment newInstance(int sectionNumber) {
-            PlaceholderFragment fragment = new PlaceholderFragment();
-            Bundle args = new Bundle();
-            args.putInt(ARG_SECTION_NUMBER, sectionNumber);
-            fragment.setArguments(args);
-            return fragment;
-        }
-
-        @Override
-        public View onCreateView(LayoutInflater inflater, ViewGroup container,
-                                 Bundle savedInstanceState) {
-            View rootView = inflater.inflate(R.layout.fragment_main, container, false);
-            return rootView;
-        }
-        @Override
-        public void onViewCreated(View view, Bundle savedInstanceState) {
-        }
+    @Override
+    public String getDToken() {
+        return dToken;
     }
 
     /**
@@ -241,14 +210,14 @@ public class MainActivity extends AppCompatActivity implements Receive.DataCommu
 
         @Override
         public Fragment getItem(int position) {
-            switch (position) {
-                case 0:
-                    return new Send();
-                case 1:
-                    return new Receive();
-                default:
-                    return null;
-            }
+                switch (position) {
+                    case 0:
+                        return new Send();
+                    case 1:
+                        return new Receive();
+                    default:
+                        return null;
+                }
         }
 
         @Override

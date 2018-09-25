@@ -24,7 +24,6 @@ public class Send extends Fragment {
     }
     private DataCommunication mListener;
 
-
     public Send() {
         // Required empty public constructor
     }

@@ -15,6 +15,7 @@ import android.provider.Settings;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
 import android.support.v4.app.Fragment;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -55,13 +56,12 @@ public class Receive_step_1 extends Fragment {
     // TODO: Rename and change types of parameters
     private String mParam1;
     private String mParam2;
-    private String mobileIp;
     private String wifiIp;
     private String bluetoothName;
     private int ACTION_BT= 56;
 
     public interface DataCommunication {
-        public void setInterfacesDetails(String mobileIp, String wifiIp, String bluetoothName);
+        public void setInterfacesDetails(boolean mobileIp, String wifiIp, String bluetoothName);
         public boolean getNoLoginMode();
     }
 
@@ -123,16 +123,10 @@ public class Receive_step_1 extends Fragment {
         mobileCheckbox.setOnCheckedChangeListener((new CompoundButton.OnCheckedChangeListener() {
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
                 if(isChecked) {
-                    ConnectivityManager connectionManager = (ConnectivityManager) getActivity().getApplicationContext().getSystemService(Context.CONNECTIVITY_SERVICE);
-                    NetworkInfo wifiCheck = connectionManager.getNetworkInfo(ConnectivityManager.TYPE_WIFI);
-                    if (wifiCheck.isConnected()) {
-                        MainActivity.snackBarNav(getActivity(), R.id.receive_container,
-                                "Seleziona questa spunta prima di connetterti ad una wifi", Snackbar.LENGTH_LONG, 1);
-                        mobileCheckbox.setChecked(false);
-                    } else {
-                        ConnectivityManager cm = (ConnectivityManager) getActivity().getApplicationContext().getSystemService(Context.CONNECTIVITY_SERVICE);
+                    ConnectivityManager cm = (ConnectivityManager) getActivity().getApplicationContext().getSystemService(Context.CONNECTIVITY_SERVICE);
                         NetworkInfo mobileCheck = cm.getNetworkInfo(ConnectivityManager.TYPE_MOBILE);
                         if (!mobileCheck.isConnected()) {
+                            Log.e("Inside", "");
                             try {
                                 Class cmClass = Class.forName(cm.getClass().getName());
                                 Method method = cmClass.getDeclaredMethod("getMobileDataEnabled");
@@ -142,15 +136,8 @@ public class Receive_step_1 extends Fragment {
                                     startActivity(new Intent().setComponent(new ComponentName("com.android.settings", "com.android.settings.Settings$DataUsageSummaryActivity")));
                                     mobileCheckbox.setChecked(false);
                                 }
-                            } catch (Exception e) {
-                                // TODO do whatever error handling you want here
-                            }
-                        } else {
-                            mobileIp=PublicIP();
+                            } catch (Exception e) { }
                         }
-                    }
-                } else {
-                    mobileIp=null;
                 }
         }}));
         final CheckBox wifiCheckbox= getActivity().findViewById(R.id.checkBox_wifi);
@@ -182,7 +169,7 @@ public class Receive_step_1 extends Fragment {
             @Override
             public void onClick(View v) {
                 if (wifiCheckbox.isChecked() || mobileCheckbox.isChecked() || bluetoothCheckbox.isChecked()) {
-                    mListener.setInterfacesDetails(mobileIp, wifiIp, bluetoothName);
+                    mListener.setInterfacesDetails(mobileCheckbox.isChecked(), wifiIp, bluetoothName);
                     if(!mListener.getNoLoginMode()) {
                         getActivity().getSupportFragmentManager().beginTransaction()
                                 .setCustomAnimations(R.anim.enter_from_right, R.anim.exit_to_left, R.anim.enter_from_left, R.anim.exit_to_right)
@@ -191,7 +178,7 @@ public class Receive_step_1 extends Fragment {
                                 .commit();
                     } else {
                         Intent myIntent = new Intent(getActivity(), Receive_loading.class);
-                        myIntent.putExtra("mobileIp", mobileIp);
+                        myIntent.putExtra("mobileIp", mobileCheckbox.isChecked());
                         myIntent.putExtra("wifiIp", wifiIp);
                         myIntent.putExtra("bluetoothName", bluetoothName);
                         myIntent.putExtra("receivingManual", true);
@@ -230,68 +217,6 @@ public class Receive_step_1 extends Fragment {
                 CheckBox bluetoothCheckbox= getActivity().findViewById(R.id.checkBox_bluetooth);
                 bluetoothCheckbox.setChecked(false);
             } else bluetoothName=BluetoothAdapter.getDefaultAdapter().getName();
-        }
-    }
-
-    public String PublicIP(){
-        boolean error= false;
-        try {
-            String output = new GetPublicIP().execute().get();
-            if(output!=null){
-                JSONObject object = (JSONObject) new JSONTokener(output).nextValue();
-                return object.getString("ip");
-            } else error=true;
-        } catch (InterruptedException e) {
-            error=true;
-            e.printStackTrace();
-        } catch (ExecutionException e) {
-            error=true;
-            e.printStackTrace();
-        } catch (JSONException e) {
-            error=true;
-            e.printStackTrace();
-        }
-        if (error) {
-            Snackbar.make(getActivity().findViewById(R.id.receive_container),
-                    "C'è stato un problema", Snackbar.LENGTH_LONG).
-                    setAction("Riprova", new View.OnClickListener() {
-                        @Override
-                        public void onClick(View view) {
-                            PublicIP();
-                        }
-                    }).show();
-            return null;
-        }
-        return null;
-    }
-    public static class GetPublicIP extends AsyncTask<Void, Void, String> {
-
-        public GetPublicIP() {
-        }
-
-        protected String doInBackground(Void... urls) {
-            try {
-                URL url = new URL("https://api.ipify.org?format=json");
-                HttpURLConnection urlConnection = (HttpURLConnection) url.openConnection();
-                try {
-                    if (urlConnection.getResponseCode()==200){
-                        InputStreamReader streamReader = new
-                                InputStreamReader(urlConnection.getInputStream());
-                        BufferedReader bufferedReader = new BufferedReader(streamReader);
-                        StringBuilder stringBuilder = new StringBuilder();
-                        String line;
-                        while ((line = bufferedReader.readLine()) != null) {
-                            stringBuilder.append(line).append("\n");
-                        }
-                        bufferedReader.close();
-                        return stringBuilder.toString();
-                    } else return null;
-                } finally {
-                    urlConnection.disconnect();
-                }
-            } catch (Exception e) {
-                return null;
-            }
         }
     }
 }

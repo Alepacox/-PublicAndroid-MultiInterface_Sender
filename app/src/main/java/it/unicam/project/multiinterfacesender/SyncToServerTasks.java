@@ -25,7 +25,7 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 
 public class SyncToServerTasks {
-    public static final String URL = "http://192.168.1.100:80";
+    public static final String URL = "http://ec2-18-191-173-32.us-east-2.compute.amazonaws.com:80";
 
     public static class LoginTask extends AsyncTask<Void, Void, String> {
         private String username;
@@ -63,7 +63,6 @@ public class SyncToServerTasks {
                 urlConnection.setDoOutput(true);
                 urlConnection.setRequestProperty("Content-Type", "application/json");
                 urlConnection.setRequestProperty("Accept", "application/json");
-                urlConnection.setRequestMethod("POST");
                 urlConnection.connect();
                 OutputStream outputStream = urlConnection.getOutputStream();
                 BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(outputStream, "UTF-8"));
@@ -122,7 +121,6 @@ public class SyncToServerTasks {
                 urlConnection.setDoOutput(true);
                 urlConnection.setRequestProperty("Content-Type", "application/json");
                 urlConnection.setRequestProperty("Accept", "application/json");
-                urlConnection.setRequestMethod("POST");
                 urlConnection.connect();
                 OutputStream outputStream = urlConnection.getOutputStream();
                 BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(outputStream, "UTF-8"));
@@ -167,9 +165,20 @@ public class SyncToServerTasks {
                 URL url = new URL(URL + api +"?utoken="+uToken+"&dtoken="+dToken);
                 HttpURLConnection urlConnection = (HttpURLConnection) url.openConnection();
                 try {
-                    if (urlConnection.getResponseCode()==401 || urlConnection.getResponseCode()==200) {
+                    if (urlConnection.getResponseCode()==200) {
                         InputStreamReader streamReader = new
                                 InputStreamReader(urlConnection.getInputStream());
+                        BufferedReader bufferedReader = new BufferedReader(streamReader);
+                        StringBuilder stringBuilder = new StringBuilder();
+                        String line;
+                        while ((line = bufferedReader.readLine()) != null) {
+                            stringBuilder.append(line).append("\n");
+                        }
+                        bufferedReader.close();
+                        return stringBuilder.toString();
+                    } else if(urlConnection.getResponseCode()==401) {
+                        InputStreamReader streamReader = new
+                                InputStreamReader(urlConnection.getErrorStream());
                         BufferedReader bufferedReader = new BufferedReader(streamReader);
                         StringBuilder stringBuilder = new StringBuilder();
                         String line;
@@ -214,13 +223,11 @@ public class SyncToServerTasks {
                 return null;
             }
             String string = json.toString();
-            Log.e("String", string);
             try {
                 urlConnection = (HttpURLConnection) ((new URL(URL + api).openConnection()));
                 urlConnection.setDoOutput(true);
                 urlConnection.setRequestProperty("Content-Type", "application/json");
                 urlConnection.setRequestProperty("Accept", "application/json");
-                urlConnection.setRequestMethod("POST");
                 urlConnection.connect();
                 OutputStream outputStream = urlConnection.getOutputStream();
                 BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(outputStream, "UTF-8"));
@@ -281,6 +288,71 @@ public class SyncToServerTasks {
                     }
                 } finally {
                     urlConnection.disconnect();
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+                return null;
+            }
+        }
+
+    }
+
+    public static class SessionConnectTask extends AsyncTask<Void, Void, String> {
+        private String userToken;
+        private String deviceToken;
+        private String sessionCode;
+
+        public SessionConnectTask(String userToken, String deviceToken, String sessionCode) {
+            this.userToken=userToken;
+            this.deviceToken=deviceToken;
+            this.sessionCode=sessionCode;
+        }
+
+        protected String doInBackground(Void... urls) {
+            String api="/api/session/connect";
+            HttpURLConnection urlConnection;
+            JSONObject json = new JSONObject();
+            try {
+                json.put("utoken", userToken);
+                json.put("dtoken", deviceToken);
+                json.put("sessioncode", sessionCode);
+            } catch (JSONException e1) {
+                e1.printStackTrace();
+                return null;
+            }
+            String string = json.toString();
+            try {
+                urlConnection = (HttpURLConnection) ((new URL(URL + api).openConnection()));
+                urlConnection.setDoOutput(true);
+                urlConnection.setRequestProperty("Content-Type", "application/json");
+                urlConnection.setRequestProperty("Accept", "application/json");
+                urlConnection.connect();
+                OutputStream outputStream = urlConnection.getOutputStream();
+                BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(outputStream, "UTF-8"));
+                writer.write(string);
+                writer.close();
+                outputStream.close();
+                if (urlConnection.getResponseCode() == 200) {
+                    BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(urlConnection.getInputStream(), "UTF-8"));
+                    String line = null;
+                    StringBuilder sb = new StringBuilder();
+                    while ((line = bufferedReader.readLine()) != null) {
+                        sb.append(line);
+                    }
+                    bufferedReader.close();
+                    return sb.toString();
+                } else if(urlConnection.getResponseCode()==401){
+                    BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(urlConnection.getErrorStream(), "UTF-8"));
+                    String line = null;
+                    StringBuilder sb = new StringBuilder();
+                    while ((line = bufferedReader.readLine()) != null) {
+                        sb.append(line);
+                    }
+                    bufferedReader.close();
+                    return sb.toString();
+                } else {
+                    Log.e("Response code", String.valueOf(urlConnection.getResponseCode()));
+                    return null;
                 }
             } catch (Exception e) {
                 e.printStackTrace();

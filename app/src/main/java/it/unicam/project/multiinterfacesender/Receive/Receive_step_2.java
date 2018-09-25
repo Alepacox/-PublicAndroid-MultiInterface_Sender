@@ -7,6 +7,7 @@ import android.os.Bundle;
 import android.support.design.widget.FloatingActionButton;
 import android.support.v4.app.Fragment;
 import android.support.v7.widget.CardView;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -32,7 +33,7 @@ public class Receive_step_2 extends Fragment {
     private String sessionCode;
 
     public interface DataCommunication {
-        public String[] getInterfacesDetails();
+        public Object[] getInterfacesDetails();
         public String getDeviceName();
     }
 
@@ -78,11 +79,11 @@ public class Receive_step_2 extends Fragment {
 
     @Override
     public void onViewCreated(View view, Bundle savedInstanceState) {
-        final String[] interfacesDetails = mListener.getInterfacesDetails();
+        final Object[] interfacesDetails = mListener.getInterfacesDetails();
         final Intent myIntent = new Intent(getActivity(), Receive_loading.class);
-        myIntent.putExtra("mobileIp", interfacesDetails[0]);
-        myIntent.putExtra("wifiIp", interfacesDetails[1]);
-        myIntent.putExtra("bluetoothName", interfacesDetails[2]);
+        myIntent.putExtra("mobileIp", (Boolean) interfacesDetails[0]);
+        myIntent.putExtra("wifiIp", String.valueOf(interfacesDetails[1]));
+        myIntent.putExtra("bluetoothName", String.valueOf(interfacesDetails[2]));
         TextView devicename= getActivity().findViewById(R.id.id_device);
         devicename.setText(mListener.getDeviceName());
         final Button buttonManual = getActivity().findViewById(R.id.button_receive_manual);

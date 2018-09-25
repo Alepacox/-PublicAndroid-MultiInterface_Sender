@@ -5,6 +5,7 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.support.design.widget.Snackbar;
 import android.support.v4.app.Fragment;
+import android.support.v4.widget.SwipeRefreshLayout;
 import android.support.v7.widget.CardView;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -43,6 +44,8 @@ public class Send_device_list extends Fragment {
     private String uToken;
     private String choosenDeviceName;
     protected ArrayList<Device> deviceList= new ArrayList<>();
+    private Thread serverTask;
+    private SwipeRefreshLayout refreshDevices;
 
     public interface DataCommunication {
         public void setChoosenDevice(String ID);
@@ -93,9 +96,15 @@ public class Send_device_list extends Fragment {
 
     @Override
     public void onViewCreated(View view, Bundle savedInstanceState) {
+        refreshDevices= getActivity().findViewById(R.id.swipe_devices);
+        refreshDevices.setOnRefreshListener(new SwipeRefreshLayout.OnRefreshListener() {
+            @Override
+            public void onRefresh() {
+                syncCollectionToServer();
+            }
+        });
         syncCollectionToServer();
         deviceListLayout= getActivity().findViewById(R.id.device_list);
-        syncCollectionToView();
         Button buttonConnect= getActivity().findViewById(R.id.button_next);
         buttonConnect.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -125,6 +134,9 @@ public class Send_device_list extends Fragment {
     public void onDetach() {
         super.onDetach();
         mListener = null;
+        if(serverTask.isAlive()){
+            serverTask.interrupt();
+        }
     }
 
     public class Device {
@@ -146,7 +158,8 @@ public class Send_device_list extends Fragment {
     }
 
     public void syncCollectionToServer(){
-        new Thread(new Runnable() {
+        refreshDevices.setRefreshing(true);
+        serverTask= new Thread(new Runnable() {
             @Override
             public void run() {
                 try {
@@ -155,6 +168,7 @@ public class Send_device_list extends Fragment {
                         if(!output.equals("unauthorized")){
                             JSONObject object = (JSONObject) new JSONTokener(output).nextValue();
                             JSONArray devices = object.getJSONArray("devices");
+                            deviceList.clear();
                             for(int i=0; i<devices.length(); i++){
                                 JSONObject device= (JSONObject) devices.get(i);
                                 String name= device.getString("Name");
@@ -183,21 +197,27 @@ public class Send_device_list extends Fragment {
                         getActivity().runOnUiThread(new Runnable() {
                             @Override
                             public void run() {
+                                refreshDevices.setRefreshing(false);
                                 Toast.makeText(getActivity(), R.string.something_wrong, Toast.LENGTH_SHORT).show();
                             }
                         });
                     }
-                } catch (Exception e) {
+                } catch (InterruptedException e){
+
+                }
+                catch (Exception e) {
                     e.printStackTrace();
                     getActivity().runOnUiThread(new Runnable() {
                         @Override
                         public void run() {
+                            refreshDevices.setRefreshing(false);
                             Toast.makeText(getActivity(), R.string.something_wrong, Toast.LENGTH_SHORT).show();
                         }
                     });
                 }
             }
-        }).start();
+        });
+        serverTask.start();
     }
 
     public void syncCollectionToView(){
@@ -227,6 +247,7 @@ public class Send_device_list extends Fragment {
                     }
                 }
             });
+            refreshDevices.setRefreshing(false);
             deviceListLayout.addView(tempView);
         }
     }

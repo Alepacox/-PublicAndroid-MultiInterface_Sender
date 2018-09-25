@@ -6,6 +6,7 @@ import android.os.Build;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
 import android.widget.TextView;
 
@@ -31,15 +32,16 @@ public class Receive_loading extends AppCompatActivity {
         TextView bluetoothAddress = findViewById(R.id.downloading_bluetooth);
         if(manual) {
             String wifiIp = intent.getStringExtra("wifiIp");
-            String mobileIp = intent.getStringExtra("mobileIp");
+            boolean mobileIp = intent.getBooleanExtra("mobileIp", true);
+            Log.e("Mobileip", String.valueOf(mobileIp));
             String bluetoothName = intent.getStringExtra("bluetoothName");
-            if (wifiIp != null) {
+            if (!wifiIp.equals("null")) {
                 localAddress.setText(wifiIp);
             }
-            if (mobileIp != null) {
-                remoteAddress.setText(mobileIp);
+            if (mobileIp) {
+                remoteAddress.setText("Active");
             }
-            if (bluetoothName != null) {
+            if (!bluetoothName.equals("null")) {
                 bluetoothAddress.setText(bluetoothName);
             }
         } else {

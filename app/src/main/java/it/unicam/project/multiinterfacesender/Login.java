@@ -108,9 +108,9 @@ public class Login extends AppCompatActivity {
                     return;
                 }
                 loginButton.startLoading();
-                loginButton.setClickable(false);
-                registrationButton.setClickable(false);
-                noLoginButton.setClickable(false);
+                loginButton.setEnabled(false);
+                registrationButton.setEnabled(false);
+                noLoginButton.setEnabled(false);
                 inputName.setEnabled(false);
                 inputPassword.setEnabled(false);
 
@@ -231,9 +231,9 @@ public class Login extends AppCompatActivity {
             public void run() {
                 inputName.setEnabled(true);
                 inputPassword.setEnabled(true);
-                loginButton.setClickable(true);
-                registrationButton.setClickable(true);
-                noLoginButton.setClickable(true);
+                loginButton.setEnabled(true);
+                registrationButton.setEnabled(true);
+                noLoginButton.setEnabled(true);
                 loginButton.loadingFailed();
                 if(wrongCredential){
                     Toast.makeText(getApplicationContext(), getResources().getString(R.string.wrong_user_psw), Toast.LENGTH_SHORT).show();
