@@ -80,7 +80,6 @@ public class SetupDeviceName extends AppCompatActivity {
                         @Override
                         public void run() {
                             addNewDevice(devicename);
-                            finish();
                         }
                     }).start();
                 }
@@ -113,6 +112,7 @@ public class SetupDeviceName extends AppCompatActivity {
                     });
                     Intent i= new Intent(SetupDeviceName.this, Login.class);
                     startActivity(i);
+                    finish();
                 }
             } else resetView(false);
         } catch (Exception e) {
