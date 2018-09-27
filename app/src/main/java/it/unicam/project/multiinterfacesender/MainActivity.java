@@ -72,6 +72,7 @@ public class MainActivity extends AppCompatActivity implements Receive.DataCommu
     private String wifiSSID;
     private boolean mobileIp;
     private String bluetoothName;
+    private RWStorage rw;
 
 
 
@@ -85,8 +86,8 @@ public class MainActivity extends AppCompatActivity implements Receive.DataCommu
         devicename = myIntent.getStringExtra("devicename");
         uToken= myIntent.getStringExtra("uToken");
         dToken= myIntent.getStringExtra("dToken");
+        rw= new RWStorage(this);
         if(!noLogin){
-            RWStorage rw= new RWStorage(this);
             rw.writeDeviceToken(dToken);
             rw.writeUserToken(uToken);
         }
@@ -135,8 +136,8 @@ public class MainActivity extends AppCompatActivity implements Receive.DataCommu
         int id = item.getItemId();
 
         //noinspection SimplifiableIfStatement
-        if (id == R.id.action_settings) {
-            return true;
+        if (id == R.id.action_logout) {
+            logout();
         }
 
         return super.onOptionsItemSelected(item);
@@ -294,5 +295,13 @@ public class MainActivity extends AppCompatActivity implements Receive.DataCommu
             Toast.makeText(getApplicationContext(), "Button pressed", Toast.LENGTH_SHORT);
             return false;
         } else return super.onKeyDown(keyCode, event);
+    }
+
+    public void logout() {
+        rw.deleteUserToken();
+        Intent i = new Intent(this, Login.class);
+        Toast.makeText(this, "Logout avvenuto con successo", Toast.LENGTH_LONG).show();
+        startActivity(i);
+        finish();
     }
 }

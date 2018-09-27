@@ -15,8 +15,8 @@ import static android.content.Context.MODE_PRIVATE;
 public class RWStorage {
     private Activity myActivity;
 
-    public RWStorage(Activity myActivity){
-        this.myActivity=myActivity;
+    public RWStorage(Activity myActivity) {
+        this.myActivity = myActivity;
     }
 
     public String readUserToken() {
@@ -34,7 +34,7 @@ public class RWStorage {
                 userToken += readstring;
             }
             InputRead.close();
-            if(userToken.length()!=0)return userToken;
+            if (userToken.length() != 0) return userToken;
             else return null;
 
         } catch (FileNotFoundException e) {
@@ -59,7 +59,7 @@ public class RWStorage {
                 deviceToken += readstring;
             }
             InputRead.close();
-            if(deviceToken.length()!=0)return deviceToken;
+            if (deviceToken.length() != 0) return deviceToken;
             else return null;
         } catch (FileNotFoundException e) {
             return null;
@@ -69,10 +69,10 @@ public class RWStorage {
         }
     }
 
-    public void writeUserToken(String uToken){
+    public void writeUserToken(String uToken) {
         try {
-            FileOutputStream fileout=myActivity.openFileOutput("uToken", MODE_PRIVATE);
-            OutputStreamWriter outputWriter=new OutputStreamWriter(fileout);
+            FileOutputStream fileout = myActivity.openFileOutput("uToken", MODE_PRIVATE);
+            OutputStreamWriter outputWriter = new OutputStreamWriter(fileout);
             outputWriter.write(uToken);
             outputWriter.close();
         } catch (FileNotFoundException e) {
@@ -83,10 +83,10 @@ public class RWStorage {
 
     }
 
-    public void writeDeviceToken(String dToken){
+    public void writeDeviceToken(String dToken) {
         try {
-            FileOutputStream fileout=myActivity.openFileOutput("dToken", MODE_PRIVATE);
-            OutputStreamWriter outputWriter=new OutputStreamWriter(fileout);
+            FileOutputStream fileout = myActivity.openFileOutput("dToken", MODE_PRIVATE);
+            OutputStreamWriter outputWriter = new OutputStreamWriter(fileout);
             outputWriter.write(dToken);
             outputWriter.close();
         } catch (FileNotFoundException e) {
@@ -96,4 +96,8 @@ public class RWStorage {
         }
     }
 
+    public void deleteUserToken() {
+        File utoken = new File(myActivity.getFilesDir(), "uToken");
+        utoken.delete();
+    }
 }
