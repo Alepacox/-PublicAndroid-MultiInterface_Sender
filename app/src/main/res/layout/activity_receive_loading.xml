@@ -60,7 +60,7 @@
         android:layout_marginEnd="8dp"
         android:layout_marginStart="8dp"
         android:layout_marginTop="35dp"
-        android:text="IP Remoto"
+        android:text="Rete mobile"
         android:textColor="@android:color/white"
         android:textSize="18sp"
         android:textStyle="bold"

@@ -107,8 +107,8 @@ public class Login extends AppCompatActivity {
                     }
                     return;
                 }
-                loginButton.startLoading();
                 loginButton.setEnabled(false);
+                loginButton.startLoading();
                 registrationButton.setEnabled(false);
                 noLoginButton.setEnabled(false);
                 inputName.setEnabled(false);

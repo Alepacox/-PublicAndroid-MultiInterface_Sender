@@ -39,7 +39,7 @@ public class Receive_loading extends AppCompatActivity {
                 localAddress.setText(wifiIp);
             }
             if (mobileIp.equals("true")) {
-                remoteAddress.setText("Active");
+                remoteAddress.setText("On");
             }
             if (!bluetoothName.equals("null")) {
                 bluetoothAddress.setText(bluetoothName);

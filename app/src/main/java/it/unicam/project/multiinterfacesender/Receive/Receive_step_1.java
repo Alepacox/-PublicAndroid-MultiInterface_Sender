@@ -181,9 +181,9 @@ public class Receive_step_1 extends Fragment {
                                 .commit();
                     } else {
                         Intent myIntent = new Intent(getActivity(), Receive_loading.class);
-                        myIntent.putExtra("mobileIp", mobileCheckbox.isChecked());
-                        myIntent.putExtra("wifiIp", wifiIp);
-                        myIntent.putExtra("bluetoothName", bluetoothName);
+                        myIntent.putExtra("mobileIp", String.valueOf(mobileCheckbox.isChecked()));
+                        myIntent.putExtra("wifiIp", String.valueOf(wifiIp));
+                        myIntent.putExtra("bluetoothName", String.valueOf(bluetoothName));
                         myIntent.putExtra("receivingManual", true);
                         getActivity().startActivity(myIntent);
                     }
