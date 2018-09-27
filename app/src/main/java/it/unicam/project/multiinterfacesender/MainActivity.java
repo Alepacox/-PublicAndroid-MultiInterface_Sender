@@ -19,12 +19,15 @@ import android.support.v4.app.FragmentPagerAdapter;
 import android.support.v4.view.ViewPager;
 import android.os.Bundle;
 import android.util.AttributeSet;
+import android.util.Log;
+import android.view.KeyEvent;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Toast;
 
 import it.unicam.project.multiinterfacesender.Receive.Receive;
 import it.unicam.project.multiinterfacesender.Receive.Receive_step_1;
@@ -66,6 +69,7 @@ public class MainActivity extends AppCompatActivity implements Receive.DataCommu
     private boolean firstTimeManual=true;
     //Receiver variables
     private String wifiIp;
+    private String wifiSSID;
     private boolean mobileIp;
     private String bluetoothName;
 
@@ -154,15 +158,16 @@ public class MainActivity extends AppCompatActivity implements Receive.DataCommu
     }
 
     @Override
-    public void setInterfacesDetails(boolean mobileIp, String wifiIp, String bluetoothName) {
+    public void setInterfacesDetails(boolean mobileIp, String wifiIp, String wifiSSID, String bluetoothName) {
         this.mobileIp=mobileIp;
         this.wifiIp=wifiIp;
+        this.wifiSSID=wifiSSID;
         this.bluetoothName=bluetoothName;
     }
 
     @Override
-    public Object[] getInterfacesDetails() {
-        return new Object[]{mobileIp, wifiIp, bluetoothName};
+    public String[] getInterfacesDetails() {
+        return new String[]{String.valueOf(mobileIp), wifiIp, wifiSSID, bluetoothName};
     }
 
     @Override
@@ -281,7 +286,13 @@ public class MainActivity extends AppCompatActivity implements Receive.DataCommu
     }
 
     @Override
-    public void onBackPressed() {
-        super.onBackPressed();
+    public boolean onKeyDown(int keyCode, KeyEvent event)  {
+        Log.e("Key", "pressed");
+        android.app.Fragment myFragment = getFragmentManager().findFragmentByTag("SEND_STEP_2");
+        if (myFragment != null && myFragment.isVisible()) {
+            Log.e("Fragment", "VISIBLE");
+            Toast.makeText(getApplicationContext(), "Button pressed", Toast.LENGTH_SHORT);
+            return false;
+        } else return super.onKeyDown(keyCode, event);
     }
 }

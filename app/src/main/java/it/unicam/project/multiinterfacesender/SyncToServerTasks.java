@@ -9,6 +9,7 @@ import android.os.AsyncTask;
 import android.util.Base64;
 import android.util.Log;
 
+import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.json.JSONTokener;
@@ -288,6 +289,86 @@ public class SyncToServerTasks {
                     }
                 } finally {
                     urlConnection.disconnect();
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+                return null;
+            }
+        }
+
+    }
+
+    public static class GenerateSessionCodeTask extends AsyncTask<Void, Void, String> {
+        private String userToken;
+        private String deviceToken;
+        private String btName;
+        private String wifiip;
+        private String wifiSSID;
+        private String mobileip;
+
+        public GenerateSessionCodeTask(String userToken, String deviceToken, String[] params) {
+            this.userToken=userToken;
+            this.deviceToken=deviceToken;
+            this.mobileip=params[0];
+            this.wifiip=params[1];
+            this.wifiSSID=params[2];
+            this.btName=params[3];
+        }
+
+        protected String doInBackground(Void... urls) {
+            String api="/api/session/new";
+            HttpURLConnection urlConnection;
+            JSONObject json = new JSONObject();
+            try {
+                json.put("utoken", userToken);
+                json.put("dtoken", deviceToken);
+                if(!btName.equals("null")) json.put("btname", btName);
+                if(!wifiip.equals("null")) {
+                    JSONArray jsonArray = new JSONArray();
+                    jsonArray.put(0, wifiip);
+                    jsonArray.put(1, wifiSSID);
+                    json.put("wifiip", jsonArray);
+                }
+                if(!mobileip.equals("null")) json.put("mobileip", Boolean.valueOf(mobileip));
+
+            } catch (JSONException e1) {
+                e1.printStackTrace();
+                return null;
+            }
+            String string = json.toString();
+            Log.e("String", string);
+            try {
+                urlConnection = (HttpURLConnection) ((new URL(URL + api).openConnection()));
+                urlConnection.setDoOutput(true);
+                urlConnection.setRequestProperty("Content-Type", "application/json");
+                urlConnection.setRequestProperty("Accept", "application/json");
+                urlConnection.connect();
+                OutputStream outputStream = urlConnection.getOutputStream();
+                BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(outputStream, "UTF-8"));
+                writer.write(string);
+                writer.close();
+                outputStream.close();
+                if (urlConnection.getResponseCode() == 200) {
+                    BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(urlConnection.getInputStream(), "UTF-8"));
+                    String line = null;
+                    StringBuilder sb = new StringBuilder();
+                    while ((line = bufferedReader.readLine()) != null) {
+                        sb.append(line);
+                    }
+                    bufferedReader.close();
+                    return sb.toString();
+                } else if(urlConnection.getResponseCode()==401){
+                    BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(urlConnection.getErrorStream(), "UTF-8"));
+                    String line = null;
+                    StringBuilder sb = new StringBuilder();
+                    while ((line = bufferedReader.readLine()) != null) {
+                        sb.append(line);
+                    }
+                    bufferedReader.close();
+                    return sb.toString();
+                } else {
+                    Log.e("Response code", String.valueOf(urlConnection.getResponseCode()));
+                    return null;
                 }
             } catch (Exception e) {
                 e.printStackTrace();

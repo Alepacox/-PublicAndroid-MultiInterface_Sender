@@ -21,6 +21,7 @@ import android.widget.Toast;
 
 import com.poovam.pinedittextfield.LinePinField;
 
+import org.json.JSONArray;
 import org.json.JSONObject;
 import org.json.JSONTokener;
 
@@ -142,7 +143,9 @@ public class Send_step_1_auto extends Fragment {
                                 JSONObject object = (JSONObject) new JSONTokener(output).nextValue();
                                 if (!object.getString("message").equals("unauthorized")) {
                                     String btName = object.getString("btname");
-                                    String wifiip = object.getString("wifiip");
+                                    JSONArray jsonArray = object.getJSONArray("wifiip");
+                                    String wifiip= jsonArray.getString(0);
+                                    String wifiSSID= jsonArray.getString(0);
                                     boolean mobileip = object.getBoolean("mobileip");
                                     getActivity().getSupportFragmentManager().beginTransaction()
                                             .setCustomAnimations(R.anim.enter_from_right, R.anim.exit_to_left, R.anim.enter_from_left, R.anim.exit_to_right)
@@ -166,6 +169,15 @@ public class Send_step_1_auto extends Fragment {
                                             pinField.setText("");
                                             Toast.makeText(getActivity(), "Non puoi comunicare con te stesso", Toast.LENGTH_LONG).show();
                                         }
+                                    });
+                                } else if (object.getString("cause").equals("user token expired")) {
+                                    getActivity().runOnUiThread(new Runnable() {
+                                        @Override
+                                        public void run() {
+                                            Intent i = new Intent(getActivity(), Login.class);
+                                            Toast.makeText(getActivity(), R.string.session_expired, Toast.LENGTH_LONG).show();
+                                            i.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+                                            startActivity(i);}
                                     });
                                 }
                             } else {
@@ -211,7 +223,7 @@ public class Send_step_1_auto extends Fragment {
     public void onDetach() {
         super.onDetach();
         mListener = null;
-        if (serverTask.isAlive()) {
+        if (serverTask!=null && serverTask.isAlive()) {
             serverTask.interrupt();
         }
     }

@@ -32,13 +32,13 @@ public class Receive_loading extends AppCompatActivity {
         TextView bluetoothAddress = findViewById(R.id.downloading_bluetooth);
         if(manual) {
             String wifiIp = intent.getStringExtra("wifiIp");
-            boolean mobileIp = intent.getBooleanExtra("mobileIp", true);
+            String mobileIp = intent.getStringExtra("mobileIp");
             Log.e("Mobileip", String.valueOf(mobileIp));
             String bluetoothName = intent.getStringExtra("bluetoothName");
             if (!wifiIp.equals("null")) {
                 localAddress.setText(wifiIp);
             }
-            if (mobileIp) {
+            if (mobileIp.equals("true")) {
                 remoteAddress.setText("Active");
             }
             if (!bluetoothName.equals("null")) {

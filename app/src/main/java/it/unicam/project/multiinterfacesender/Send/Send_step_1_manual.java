@@ -277,7 +277,7 @@ public class Send_step_1_manual extends Fragment {
                         } else {
                             getActivity().getSupportFragmentManager().beginTransaction()
                                     .setCustomAnimations(R.anim.enter_from_right, R.anim.exit_to_left, R.anim.enter_from_left, R.anim.exit_to_right)
-                                    .replace(R.id.send_container, new Send_step_2(), "")
+                                    .replace(R.id.send_container, new Send_step_2(), "SEND_STEP_2")
                                     .addToBackStack(null)
                                     .commit();
                         }

@@ -57,11 +57,12 @@ public class Receive_step_1 extends Fragment {
     private String mParam1;
     private String mParam2;
     private String wifiIp;
+    private String wifiSSID;
     private String bluetoothName;
     private int ACTION_BT= 56;
 
     public interface DataCommunication {
-        public void setInterfacesDetails(boolean mobileIp, String wifiIp, String bluetoothName);
+        public void setInterfacesDetails(boolean mobileIp, String wifiIp, String wifiSSID, String bluetoothName);
         public boolean getNoLoginMode();
     }
 
@@ -158,8 +159,10 @@ public class Receive_step_1 extends Fragment {
                                 (ipAddress & 0xff), (ipAddress >> 8 & 0xff),
                                 (ipAddress >> 16 & 0xff), (ipAddress >> 24 & 0xff));
                         wifiIp=ip;
+                        wifiSSID= wifiInfo.getSSID();
                     }
                 } else {
+                    wifiSSID=null;
                     wifiIp=null;
                 }
             }
@@ -169,7 +172,7 @@ public class Receive_step_1 extends Fragment {
             @Override
             public void onClick(View v) {
                 if (wifiCheckbox.isChecked() || mobileCheckbox.isChecked() || bluetoothCheckbox.isChecked()) {
-                    mListener.setInterfacesDetails(mobileCheckbox.isChecked(), wifiIp, bluetoothName);
+                    mListener.setInterfacesDetails(mobileCheckbox.isChecked(), wifiIp, wifiSSID, bluetoothName);
                     if(!mListener.getNoLoginMode()) {
                         getActivity().getSupportFragmentManager().beginTransaction()
                                 .setCustomAnimations(R.anim.enter_from_right, R.anim.exit_to_left, R.anim.enter_from_left, R.anim.exit_to_right)

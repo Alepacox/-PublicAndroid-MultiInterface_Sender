@@ -134,7 +134,7 @@ public class Send_device_list extends Fragment {
     public void onDetach() {
         super.onDetach();
         mListener = null;
-        if(serverTask.isAlive()){
+        if(serverTask!=null && serverTask.isAlive()){
             serverTask.interrupt();
         }
     }
