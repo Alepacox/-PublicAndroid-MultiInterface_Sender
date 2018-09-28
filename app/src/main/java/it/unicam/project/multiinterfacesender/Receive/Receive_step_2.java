@@ -204,26 +204,29 @@ public class Receive_step_2 extends Fragment {
                             getActivity().runOnUiThread(new Runnable() {
                                 @Override
                                 public void run() {
-                                    mListener.setSwipable(false);
-                                    if(refreshing) {
-                                        resetView(true);
-                                    }
-                                    RelativeLayout generateLayout= getActivity().findViewById(R.id.receive_generate_layout);
-                                    generateLayout.setVisibility(View.INVISIBLE);
-                                    buttonManual.setVisibility(View.INVISIBLE);
-                                    textGeneratedCode.setText(sessioncode);
-                                    CardView sessionCard = getActivity().findViewById(R.id.cardview_session_code);
-                                    sessionCard.setVisibility(View.VISIBLE);
-                                    shareSession.setOnClickListener(new View.OnClickListener() {
-                                        @Override
-                                        public void onClick(View view) {
-                                            Intent sendIntent = new Intent();
-                                            sendIntent.setAction(Intent.ACTION_SEND);
-                                            sendIntent.putExtra(Intent.EXTRA_TEXT, "MultiInterface Sender: il mio codice di connessione è "+ sessioncode);
-                                            sendIntent.setType("text/plain");
-                                            startActivity(sendIntent);
+                                    try{
+                                        mListener.setSwipable(false);
+                                        if(refreshing) {
+                                            resetView(true);
                                         }
-                                    });
+                                        RelativeLayout generateLayout= getActivity().findViewById(R.id.receive_generate_layout);
+                                        generateLayout.setVisibility(View.INVISIBLE);
+                                        buttonManual.setVisibility(View.INVISIBLE);
+                                        textGeneratedCode.setText(sessioncode);
+                                        CardView sessionCard = getActivity().findViewById(R.id.cardview_session_code);
+                                        sessionCard.setVisibility(View.VISIBLE);
+                                        shareSession.setOnClickListener(new View.OnClickListener() {
+                                            @Override
+                                            public void onClick(View view) {
+                                                Intent sendIntent = new Intent();
+                                                sendIntent.setAction(Intent.ACTION_SEND);
+                                                sendIntent.putExtra(Intent.EXTRA_TEXT, "MultiInterface Sender: il mio codice di connessione è "+ sessioncode);
+                                                sendIntent.setType("text/plain");
+                                                startActivity(sendIntent);
+                                            }
+                                        });
+                                    } catch (NullPointerException e){
+                                    }
                                 }
                             });
                         } else if (object.getString("cause").equals("user token expired")) {
@@ -241,8 +244,10 @@ public class Receive_step_2 extends Fragment {
                         getActivity().runOnUiThread(new Runnable() {
                             @Override
                             public void run() {
-                                resetView(refreshing);
-                                Toast.makeText(getActivity(), R.string.something_wrong, Toast.LENGTH_LONG).show();
+                                try{
+                                    resetView(refreshing);
+                                    Toast.makeText(getActivity(), R.string.something_wrong, Toast.LENGTH_LONG).show();
+                                } catch (NullPointerException e){}
                             }
                         });
                     }
@@ -253,8 +258,10 @@ public class Receive_step_2 extends Fragment {
                     getActivity().runOnUiThread(new Runnable() {
                         @Override
                         public void run() {
-                            resetView(refreshing);
-                            Toast.makeText(getActivity(), R.string.something_wrong, Toast.LENGTH_LONG).show();
+                            try{
+                                resetView(refreshing);
+                                Toast.makeText(getActivity(), R.string.something_wrong, Toast.LENGTH_LONG).show();
+                            } catch (NullPointerException e){}
                         }
                     });
                 }

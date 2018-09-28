@@ -6,6 +6,7 @@
     android:layout_width="match_parent"
     android:focusableInTouchMode="true"
     android:layout_height="match_parent"
+
     tools:context=".Send.Send_step_1_auto">
 
     <Button
@@ -53,7 +54,6 @@
         android:text="Modalità manuale"
         android:textColor="@android:color/white"
         android:textSize="12sp"
-        android:windowSoftInputMode="adjustNothing"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent" />

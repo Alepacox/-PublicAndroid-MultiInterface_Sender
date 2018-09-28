@@ -2,18 +2,23 @@ package it.unicam.project.multiinterfacesender.Send;
 
 import android.app.AlertDialog;
 import android.app.ProgressDialog;
+import android.bluetooth.BluetoothAdapter;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.os.Bundle;
+import android.support.design.widget.Snackbar;
 import android.support.design.widget.TextInputLayout;
 import android.support.v4.app.Fragment;
 import android.text.Editable;
 import android.text.InputType;
 import android.text.TextWatcher;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.FrameLayout;
@@ -25,7 +30,9 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 import org.json.JSONTokener;
 
+import it.unicam.project.multiinterfacesender.DirectlyConnect;
 import it.unicam.project.multiinterfacesender.Login;
+import it.unicam.project.multiinterfacesender.MainActivity;
 import it.unicam.project.multiinterfacesender.R;
 import it.unicam.project.multiinterfacesender.Registration;
 import it.unicam.project.multiinterfacesender.SetupDeviceName;
@@ -46,6 +53,9 @@ public class Send_step_1_auto extends Fragment {
     private String uToken;
     private String dToken;
     private Thread serverTask;
+    private DirectlyConnect dc;
+    private int ACTION_BT_ENABLE= 5452;
+    private int MY_PERMISSION_REQUEST_COARSE_LOCATION = 5489;
 
     public interface DataCommunication {
         public String getUToken();
@@ -96,6 +106,7 @@ public class Send_step_1_auto extends Fragment {
 
     @Override
     public void onViewCreated(View view, Bundle savedInstanceState) {
+        getActivity().getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_NOTHING);
         pinField = getActivity().findViewById(R.id.pin_input);
         Button buttonManual = getActivity().findViewById(R.id.button_send_manual);
         buttonManual.setOnClickListener(new View.OnClickListener() {
@@ -133,6 +144,7 @@ public class Send_step_1_auto extends Fragment {
                 }
                 final ProgressDialog progressDialog = new ProgressDialog(getActivity());
                 progressDialog.setMessage("Connessione in corso");
+                progressDialog.setCancelable(false);
                 progressDialog.show();
                 serverTask = new Thread(new Runnable() {
                     @Override
@@ -142,32 +154,39 @@ public class Send_step_1_auto extends Fragment {
                             if (output != null) {
                                 JSONObject object = (JSONObject) new JSONTokener(output).nextValue();
                                 if (!object.getString("message").equals("unauthorized")) {
-                                    String btName = object.getString("btname");
+                                    final String btName = object.getString("btname");
                                     JSONArray jsonArray = object.getJSONArray("wifiip");
                                     String wifiip= jsonArray.getString(0);
-                                    String wifiSSID= jsonArray.getString(0);
-                                    boolean mobileip = object.getBoolean("mobileip");
-                                    getActivity().getSupportFragmentManager().beginTransaction()
-                                            .setCustomAnimations(R.anim.enter_from_right, R.anim.exit_to_left, R.anim.enter_from_left, R.anim.exit_to_right)
-                                            .replace(R.id.send_container, new Send_step_2(), "")
-                                            .addToBackStack(null)
-                                            .commit();
+                                    final String wifiSSID= jsonArray.getString(1);
+                                    final boolean mobileip = object.getBoolean("mobileip");
+                                    getActivity().runOnUiThread(new Runnable() {
+                                        @Override
+                                        public void run() {
+                                            progressDialog.dismiss();
+                                            dc= new DirectlyConnect(getActivity(), getActivity().getSupportFragmentManager(), btName, wifiSSID, mobileip);
+                                            dc.startDirectylyConnection();
+                                        }
+                                    });
                                 } else if (object.getString("cause").equals("invalid session code")) {
                                     getActivity().runOnUiThread(new Runnable() {
                                         @Override
                                         public void run() {
-                                            progressDialog.cancel();
-                                            pinField.setText("");
-                                            Toast.makeText(getActivity(), "Nessuna sessione valida per questo PIN", Toast.LENGTH_SHORT).show();
+                                            try {
+                                                progressDialog.cancel();
+                                                pinField.setText("");
+                                                Toast.makeText(getActivity(), "Nessuna sessione valida per questo PIN", Toast.LENGTH_SHORT).show();
+                                            } catch (NullPointerException e) {}
                                         }
                                     });
                                 } else if (object.getString("cause").equals("same device")) {
                                     getActivity().runOnUiThread(new Runnable() {
                                         @Override
                                         public void run() {
-                                            progressDialog.cancel();
-                                            pinField.setText("");
-                                            Toast.makeText(getActivity(), "Non puoi comunicare con te stesso", Toast.LENGTH_LONG).show();
+                                            try{
+                                                progressDialog.cancel();
+                                                pinField.setText("");
+                                                Toast.makeText(getActivity(), "Non puoi comunicare con te stesso", Toast.LENGTH_LONG).show();
+                                            } catch (NullPointerException e){}
                                         }
                                     });
                                 } else if (object.getString("cause").equals("user token expired")) {
@@ -184,8 +203,10 @@ public class Send_step_1_auto extends Fragment {
                                 getActivity().runOnUiThread(new Runnable() {
                                     @Override
                                     public void run() {
-                                        progressDialog.cancel();
-                                        Toast.makeText(getActivity(), R.string.something_wrong, Toast.LENGTH_LONG).show();
+                                        try{
+                                            progressDialog.cancel();
+                                            Toast.makeText(getActivity(), R.string.something_wrong, Toast.LENGTH_LONG).show();
+                                        } catch (NullPointerException e){}
                                     }
                                 });
                             }
@@ -196,8 +217,10 @@ public class Send_step_1_auto extends Fragment {
                             getActivity().runOnUiThread(new Runnable() {
                                 @Override
                                 public void run() {
-                                    progressDialog.cancel();
-                                    Toast.makeText(getActivity(), R.string.something_wrong, Toast.LENGTH_LONG).show();
+                                    try{
+                                        progressDialog.cancel();
+                                        Toast.makeText(getActivity(), R.string.something_wrong, Toast.LENGTH_LONG).show();
+                                    } catch (NullPointerException e){}
                                 }
                             });
                         }
@@ -226,6 +249,32 @@ public class Send_step_1_auto extends Fragment {
         if (serverTask!=null && serverTask.isAlive()) {
             serverTask.interrupt();
         }
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode,
+                                           String permissions[], int[] grantResults) {
+        if (requestCode == MY_PERMISSION_REQUEST_COARSE_LOCATION) {
+            if (grantResults.length > 0
+                    && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                //Non viene gestito dall'handler della class, quindi bisogna creare un metodo che chiami startdiscovery() dalla classe
+                BluetoothAdapter.getDefaultAdapter().startDiscovery();
+            } else {
+                dc.handleSomethingWrongOnStep2("La localizzazione è necessaria per trovare gli altri dispositivi");
+            }
+        }
+    }
+
+    public void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == ACTION_BT_ENABLE) {
+            if (resultCode == getActivity().RESULT_CANCELED) {
+                dc.handleSomethingWrongOnStep2("Attivare il bluetooth per continuare");
+            } else {
+                //Non viene gestito dall'handler della class, quindi bisogna creare un metodo che chiami startdiscovery() dalla classe
+            }
+        }
+
     }
 
 }

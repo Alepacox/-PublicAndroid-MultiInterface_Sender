@@ -233,7 +233,7 @@ public class Send_step_1_manual extends Fragment {
                 if (isChecked) {
                     ConnectivityManager connectionManager = (ConnectivityManager) getActivity().getApplicationContext().getSystemService(Context.CONNECTIVITY_SERVICE);
                     NetworkInfo wifiCheck = connectionManager.getNetworkInfo(ConnectivityManager.TYPE_WIFI);
-                    if (!wifiCheck.isConnected()) {
+                    if (!wifiCheck.isConnectedOrConnecting()) {
                         Toast.makeText(getActivity(), "Connettiti ad una wifi per procedere", Toast.LENGTH_LONG).show();
                         startActivity(new Intent(Settings.ACTION_WIFI_SETTINGS));
                         wifiSwitch.setChecked(false);

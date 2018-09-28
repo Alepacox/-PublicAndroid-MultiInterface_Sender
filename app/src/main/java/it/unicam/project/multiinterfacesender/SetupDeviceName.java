@@ -108,11 +108,11 @@ public class SetupDeviceName extends AppCompatActivity {
                         @Override
                         public void run() {
                             Toast.makeText(getApplicationContext(), getResources().getString(R.string.session_expired), Toast.LENGTH_LONG).show();
+                            Intent i= new Intent(SetupDeviceName.this, Login.class);
+                            startActivity(i);
+                            finish();
                         }
                     });
-                    Intent i= new Intent(SetupDeviceName.this, Login.class);
-                    startActivity(i);
-                    finish();
                 }
             } else resetView(false);
         } catch (Exception e) {
@@ -125,11 +125,13 @@ public class SetupDeviceName extends AppCompatActivity {
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
-                idDevice.setEnabled(true);
-                setupDoneButton.setClickable(true);
-                if(alreadyTakenDeviceName){
-                    idDevice.setError(getResources().getString(R.string.devicename_already_picked));
-                } else Toast.makeText(getApplicationContext(), getResources().getString(R.string.something_wrong), Toast.LENGTH_SHORT).show();
+                try {
+                    idDevice.setEnabled(true);
+                    setupDoneButton.setClickable(true);
+                    if(alreadyTakenDeviceName){
+                        idDevice.setError(getResources().getString(R.string.devicename_already_picked));
+                    } else Toast.makeText(getApplicationContext(), getResources().getString(R.string.something_wrong), Toast.LENGTH_SHORT).show();
+                } catch (Exception e){}
             }
         });
     }

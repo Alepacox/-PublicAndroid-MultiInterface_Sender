@@ -147,8 +147,8 @@ public class Receive_step_1 extends Fragment {
                 if(isChecked){
                     ConnectivityManager connectionManager = (ConnectivityManager) getActivity().getApplicationContext().getSystemService(Context.CONNECTIVITY_SERVICE);
                     NetworkInfo wifiCheck = connectionManager.getNetworkInfo(ConnectivityManager.TYPE_WIFI);
-                    if (!wifiCheck.isConnected()) {
-                        Toast.makeText(getActivity(), "Assicurati di connetterti alla stessa wifi dell'altro", Toast.LENGTH_LONG).show();
+                    if (!wifiCheck.isConnectedOrConnecting()) {
+                        Toast.makeText(getActivity(), "Assicurati di connetterti alla stessa wifi dell'inviante", Toast.LENGTH_LONG).show();
                         startActivity(new Intent(Settings.ACTION_WIFI_SETTINGS));
                         wifiCheckbox.setChecked(false);
                     } else {

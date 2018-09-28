@@ -179,7 +179,10 @@ public class Send_device_list extends Fragment {
                             getActivity().runOnUiThread(new Runnable() {
                                 @Override
                                 public void run() {
-                                    syncCollectionToView();
+                                    try {
+                                        syncCollectionToView();
+                                    } catch (NullPointerException e){
+                                    }
                                 }
                             });
                         } else {
@@ -197,8 +200,11 @@ public class Send_device_list extends Fragment {
                         getActivity().runOnUiThread(new Runnable() {
                             @Override
                             public void run() {
-                                refreshDevices.setRefreshing(false);
-                                Toast.makeText(getActivity(), R.string.something_wrong, Toast.LENGTH_SHORT).show();
+                                try{
+                                    refreshDevices.setRefreshing(false);
+                                    Toast.makeText(getActivity(), R.string.something_wrong, Toast.LENGTH_SHORT).show();
+                                } catch (NullPointerException e){
+                                }
                             }
                         });
                     }
@@ -210,8 +216,11 @@ public class Send_device_list extends Fragment {
                     getActivity().runOnUiThread(new Runnable() {
                         @Override
                         public void run() {
-                            refreshDevices.setRefreshing(false);
-                            Toast.makeText(getActivity(), R.string.something_wrong, Toast.LENGTH_SHORT).show();
+                            try{
+                                refreshDevices.setRefreshing(false);
+                                Toast.makeText(getActivity(), R.string.something_wrong, Toast.LENGTH_SHORT).show();
+                            } catch (NullPointerException e){
+                            }
                         }
                     });
                 }
