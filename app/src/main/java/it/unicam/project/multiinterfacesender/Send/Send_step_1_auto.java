@@ -1,27 +1,16 @@
 package it.unicam.project.multiinterfacesender.Send;
 
-import android.app.AlertDialog;
 import android.app.ProgressDialog;
-import android.bluetooth.BluetoothAdapter;
 import android.content.Context;
-import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
-import android.support.design.widget.Snackbar;
-import android.support.design.widget.TextInputLayout;
 import android.support.v4.app.Fragment;
-import android.text.Editable;
-import android.text.InputType;
-import android.text.TextWatcher;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.WindowManager;
 import android.widget.Button;
-import android.widget.EditText;
-import android.widget.FrameLayout;
 import android.widget.Toast;
 
 import com.poovam.pinedittextfield.LinePinField;
@@ -32,10 +21,7 @@ import org.json.JSONTokener;
 
 import it.unicam.project.multiinterfacesender.DirectlyConnect;
 import it.unicam.project.multiinterfacesender.Login;
-import it.unicam.project.multiinterfacesender.MainActivity;
 import it.unicam.project.multiinterfacesender.R;
-import it.unicam.project.multiinterfacesender.Registration;
-import it.unicam.project.multiinterfacesender.SetupDeviceName;
 import it.unicam.project.multiinterfacesender.SyncToServerTasks;
 
 
@@ -133,6 +119,7 @@ public class Send_step_1_auto extends Fragment {
 
         Button buttonConnect = getActivity().findViewById(R.id.button_next);
         buttonConnect.setText("CONNETTI");
+        final Fragment currentFragment= this;
         buttonConnect.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
@@ -143,7 +130,7 @@ public class Send_step_1_auto extends Fragment {
                     return;
                 }
                 final ProgressDialog progressDialog = new ProgressDialog(getActivity());
-                progressDialog.setMessage("Connessione in corso");
+                progressDialog.setMessage("Verifica in corso");
                 progressDialog.setCancelable(false);
                 progressDialog.show();
                 serverTask = new Thread(new Runnable() {
@@ -156,14 +143,14 @@ public class Send_step_1_auto extends Fragment {
                                 if (!object.getString("message").equals("unauthorized")) {
                                     final String btName = object.getString("btname");
                                     JSONArray jsonArray = object.getJSONArray("wifiip");
-                                    String wifiip= jsonArray.getString(0);
+                                    final String wifiip= jsonArray.getString(0);
                                     final String wifiSSID= jsonArray.getString(1);
                                     final boolean mobileip = object.getBoolean("mobileip");
                                     getActivity().runOnUiThread(new Runnable() {
                                         @Override
                                         public void run() {
                                             progressDialog.dismiss();
-                                            dc= new DirectlyConnect(getActivity(), getActivity().getSupportFragmentManager(), btName, wifiSSID, mobileip);
+                                            dc= new DirectlyConnect(currentFragment, btName, wifiip, wifiSSID, mobileip);
                                             dc.startDirectylyConnection();
                                         }
                                     });
@@ -257,10 +244,9 @@ public class Send_step_1_auto extends Fragment {
         if (requestCode == MY_PERMISSION_REQUEST_COARSE_LOCATION) {
             if (grantResults.length > 0
                     && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                //Non viene gestito dall'handler della class, quindi bisogna creare un metodo che chiami startdiscovery() dalla classe
-                BluetoothAdapter.getDefaultAdapter().startDiscovery();
+                dc.handleGuaranteedPermission(false);
             } else {
-                dc.handleSomethingWrongOnStep2("La localizzazione è necessaria per trovare gli altri dispositivi");
+                dc.handleSomethingWrong("La localizzazione è necessaria per effettuare la connessione");
             }
         }
     }
@@ -269,9 +255,9 @@ public class Send_step_1_auto extends Fragment {
         super.onActivityResult(requestCode, resultCode, data);
         if (requestCode == ACTION_BT_ENABLE) {
             if (resultCode == getActivity().RESULT_CANCELED) {
-                dc.handleSomethingWrongOnStep2("Attivare il bluetooth per continuare");
+                dc.handleSomethingWrong("Attivare il bluetooth per continuare");
             } else {
-                //Non viene gestito dall'handler della class, quindi bisogna creare un metodo che chiami startdiscovery() dalla classe
+                dc.handleGuaranteedPermission(true);
             }
         }
 

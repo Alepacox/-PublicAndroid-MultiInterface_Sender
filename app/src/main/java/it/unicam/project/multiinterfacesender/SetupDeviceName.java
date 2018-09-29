@@ -102,6 +102,7 @@ public class SetupDeviceName extends AppCompatActivity {
                         i.putExtra("uToken", uToken);
                         i.putExtra("dToken", dToken);
                         startActivity(i);
+                        finish();
                     } else resetView(true);
                 } else {
                     runOnUiThread(new Runnable() {

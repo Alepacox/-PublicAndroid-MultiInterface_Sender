@@ -17,6 +17,8 @@ import android.content.res.Resources;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.net.Uri;
+import android.net.wifi.WifiInfo;
+import android.net.wifi.WifiManager;
 import android.os.Build;
 import android.os.Bundle;
 import android.provider.Settings;
@@ -26,6 +28,8 @@ import android.support.design.widget.TextInputLayout;
 import android.support.v4.app.Fragment;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.widget.CardView;
+import android.text.Editable;
+import android.text.TextWatcher;
 import android.util.TypedValue;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -41,7 +45,10 @@ import net.cachapa.expandablelayout.ExpandableLayout;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
+import it.unicam.project.multiinterfacesender.DirectlyConnect;
 import it.unicam.project.multiinterfacesender.MainActivity;
 import it.unicam.project.multiinterfacesender.R;
 
@@ -50,7 +57,6 @@ public class Send_step_1_manual extends Fragment {
     // the fragment initialization parameters, e.g. ARG_ITEM_NUMBER
     private static final String ARG_PARAM1 = "param1";
     private static final String ARG_PARAM2 = "param2";
-    private final int ACTION_BT_ENABLE = 875;
     private DataCommunication mListener;
     private CheckBox bluetoothSwitch;
     private CheckBox mobileSwitch;
@@ -58,53 +64,23 @@ public class Send_step_1_manual extends Fragment {
     private boolean[] interfaces = {false, false, false};
     private ExpandableLayout interfaceExapandableLayout;
     private ExpandableLayout paramsExapandableLayout;
-    private ProgressDialog connectingDialog;
-    private String bluetoothName;
-    private boolean found = false;
-    private int MY_PERMISSION_REQUEST_COARSE_LOCATION = 542;
-    private BroadcastReceiver mReceiver = new BroadcastReceiver() {
-        public void onReceive(Context context, Intent intent) {
-            String action = intent.getAction();
-            if (BluetoothDevice.ACTION_FOUND.equals(action)) {
-                BluetoothDevice device = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
-                if (device.getName().equals(bluetoothName)) {
-                    found = true;
-                    Class class1 = null;
-                    try {
-                        class1 = Class.forName("android.bluetooth.BluetoothDevice");
-                        Method createBondMethod = class1.getMethod("createBond");
-                        Boolean returnValue = (Boolean) createBondMethod.invoke(device);
-                        if (!returnValue) {
-                            if (connectingDialog.isShowing()) {
-                                connectingDialog.cancel();
-                                Snackbar.make(getActivity().findViewById(R.id.send_container),
-                                        "Si è verificato un errore nella connessione con il dispositivo Bluetooth", Snackbar.LENGTH_LONG).show();
-                            }
-                        }
-                    } catch (ClassNotFoundException e) {
-                        e.printStackTrace();
-                    } catch (NoSuchMethodException e) {
-                        e.printStackTrace();
-                    } catch (IllegalAccessException e) {
-                        e.printStackTrace();
-                    } catch (InvocationTargetException e) {
-                        e.printStackTrace();
-                    }
-                }
-            } else if (BluetoothAdapter.ACTION_DISCOVERY_FINISHED.equals(action) && !found) {
-                if (connectingDialog.isShowing()) {
-                    connectingDialog.cancel();
-                    MainActivity.snackBarNav(getActivity(), R.id.send_container,
-                            "Non è stato trovato il dispositivo Bluetooth", Snackbar.LENGTH_LONG, 0);
-                }
-            }
-        }
-    };
-
+    private static final Pattern IP_ADDRESS
+            = Pattern.compile(
+            "((25[0-5]|2[0-4][0-9]|[0-1][0-9]{2}|[1-9][0-9]|[1-9])\\.(25[0-5]|2[0-4]"
+                    + "[0-9]|[0-1][0-9]{2}|[1-9][0-9]|[1-9]|0)\\.(25[0-5]|2[0-4][0-9]|[0-1]"
+                    + "[0-9]{2}|[1-9][0-9]|[1-9]|0)\\.(25[0-5]|2[0-4][0-9]|[0-1][0-9]{2}"
+                    + "|[1-9][0-9]|[0-9]))");
+    private DirectlyConnect dc;
+    private TextInputEditText wifipiText;
+    private TextInputLayout wifipiLayout;
+    private TextInputEditText bluetoothText;
+    private TextInputLayout bluetoothLayout;
+    private boolean configuringInterfaces;
+    private int ACTION_BT_ENABLE= 5452;
+    private int MY_PERMISSION_REQUEST_COARSE_LOCATION = 5489;
 
     public interface DataCommunication {
         public void setInterfaces(boolean[] value);
-
         public boolean isTheFirstTimeManual();
     }
 
@@ -141,11 +117,9 @@ public class Send_step_1_manual extends Fragment {
             mParam1 = getArguments().getString(ARG_PARAM1);
             mParam2 = getArguments().getString(ARG_PARAM2);
         }
-        connectingDialog = new ProgressDialog(getActivity());
         IntentFilter filter = new IntentFilter();
         filter.addAction(BluetoothDevice.ACTION_FOUND);
         filter.addAction(BluetoothAdapter.ACTION_DISCOVERY_FINISHED);
-        getContext().registerReceiver(mReceiver, filter);
     }
 
     @Override
@@ -161,11 +135,10 @@ public class Send_step_1_manual extends Fragment {
             AlertDialog.Builder alertDialog = new AlertDialog.Builder(getActivity());
             alertDialog.setTitle("Modalità manuale");
             alertDialog.setMessage("Sincronizza le interfacce da utilizzare " +
-                    "con quelle del ricevente ed inserisci i suoi parametri visibili" +
-                    " sullo schermo una volta in ascolto");
+                    "con quelle del ricevente ed inserisci i parametri visibili" +
+                    "sul suo schermo una volta in ascolto");
 
             alertDialog.setIcon(R.mipmap.ic_launcher);
-
             alertDialog.setPositiveButton("OK",
                     new DialogInterface.OnClickListener() {
                         public void onClick(DialogInterface dialog, int which) {
@@ -174,7 +147,47 @@ public class Send_step_1_manual extends Fragment {
                     });
             alertDialog.show();
         }
-        CardView interfaceCard = getActivity().findViewById(R.id.cardInterfaces);
+        wifipiText= getActivity().findViewById(R.id.input_wifi_ip);
+        wifipiLayout= getActivity().findViewById(R.id.input_layout_wifi_ip);
+        wifipiText.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence charSequence, int i, int i1, int i2) {
+
+            }
+
+            @Override
+            public void onTextChanged(CharSequence charSequence, int i, int i1, int i2) {
+                if(wifipiLayout.isErrorEnabled()){
+                    wifipiLayout.setErrorEnabled(false);
+                }
+            }
+
+            @Override
+            public void afterTextChanged(Editable editable) {
+
+            }
+        });
+        bluetoothLayout= getActivity().findViewById(R.id.input_layout_bluetooth_name);
+        bluetoothText= getActivity().findViewById(R.id.input_bluetooth_name);
+        bluetoothText.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence charSequence, int i, int i1, int i2) {
+
+            }
+
+            @Override
+            public void onTextChanged(CharSequence charSequence, int i, int i1, int i2) {
+                if(bluetoothLayout.isErrorEnabled()){
+                    bluetoothLayout.setErrorEnabled(false);
+                }
+            }
+
+            @Override
+            public void afterTextChanged(Editable editable) {
+
+            }
+        });
+        final CardView interfaceCard = getActivity().findViewById(R.id.cardInterfaces);
         interfaceExapandableLayout = getActivity().findViewById(R.id.expandable_interfaces);
         interfaceCard.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -217,14 +230,12 @@ public class Send_step_1_manual extends Fragment {
                             Toast.makeText(getActivity(), "Attiva la rete mobile per procedere", Toast.LENGTH_LONG).show();
                             startActivity(new Intent().setComponent(new ComponentName("com.android.settings", "com.android.settings.Settings$DataUsageSummaryActivity")));
                             mobileSwitch.setChecked(false);
-                            interfaces[1] = false;
-                        } else interfaces[1] = true;
+                            interfaces[0] = false;
+                        } else interfaces[0] = true;
                     } catch (Exception e) {
                         e.printStackTrace();
                     }
-
-
-                } else interfaces[1] = false;
+                } else interfaces[0] = false;
             }
         }));
         wifiSwitch = getActivity().findViewById(R.id.checkBox_wifi_send);
@@ -237,9 +248,9 @@ public class Send_step_1_manual extends Fragment {
                         Toast.makeText(getActivity(), "Connettiti ad una wifi per procedere", Toast.LENGTH_LONG).show();
                         startActivity(new Intent(Settings.ACTION_WIFI_SETTINGS));
                         wifiSwitch.setChecked(false);
-                        interfaces[0] = false;
-                    } else interfaces[0] = true;
-                } else interfaces[0] = false;
+                        interfaces[1] = false;
+                    } else interfaces[1] = true;
+                } else interfaces[1] = false;
             }
         }));
         CardView paramsCard = getActivity().findViewById(R.id.cardParams);
@@ -261,27 +272,53 @@ public class Send_step_1_manual extends Fragment {
         });
         Button buttonConnect = getActivity().findViewById(R.id.button_next);
         buttonConnect.setText("CONNETTI");
+        final Fragment currentFragment= this;
         buttonConnect.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
                 if ((interfaces[0] || interfaces[1] || interfaces[2])) {
-                    if (interfaces[2]) {
-                        TextInputEditText bluetoothInput = getActivity().findViewById(R.id.input_bluetooth_name);
-                        bluetoothName = bluetoothInput.getText().toString();
-                        if (!bluetoothName.matches("")) {
-                            connectingDialog.setTitle("");
-                            connectingDialog.setMessage("Connessione in corso");
-                            connectingDialog.setIndeterminate(true);
-                            connectingDialog.show();
-                            startBluetoothDiscovery();
+                    String btname=null;
+                    String wifiSSID= null;
+                    String wifiip= null;
+                    if(interfaces[1]){
+                        ConnectivityManager connectionManager = (ConnectivityManager) getActivity().getApplicationContext().getSystemService(Context.CONNECTIVITY_SERVICE);
+                        NetworkInfo wifiCheck = connectionManager.getNetworkInfo(ConnectivityManager.TYPE_WIFI);
+                        if (wifiCheck.isConnected()) {
+                            String insertedWifiIp= wifipiText.getText().toString();
+                            if(insertedWifiIp.length()==0){
+                                wifipiText.setError("Questo campo non può essere vuoto");
+                                return;
+                            } else if(!IP_ADDRESS.matcher(insertedWifiIp).matches()){
+                                wifipiText.setError("Inserisci un indirizzo ip valido");
+                                return;
+                            } else {
+                                WifiManager wifiManager = (WifiManager) getActivity().getApplicationContext().getSystemService(Context.WIFI_SERVICE);
+                                wifiSSID= wifiManager.getConnectionInfo().getSSID();
+                                wifiip= insertedWifiIp;
+                            }
                         } else {
-                            getActivity().getSupportFragmentManager().beginTransaction()
-                                    .setCustomAnimations(R.anim.enter_from_right, R.anim.exit_to_left, R.anim.enter_from_left, R.anim.exit_to_right)
-                                    .replace(R.id.send_container, new Send_step_2(), "SEND_STEP_2")
-                                    .addToBackStack(null)
-                                    .commit();
+                            wifiSwitch.setChecked(false);
+                            MainActivity.snackBarNav(getActivity(), R.id.send_container,
+                                    "Ti sei disconnesso dalla wifi, riconnettiti", Snackbar.LENGTH_LONG, 0);
+                            return;
                         }
                     }
+                    if (interfaces[2]) {
+                        if(BluetoothAdapter.getDefaultAdapter().isEnabled()){
+                            String insertedBluetoothName= bluetoothText.getText().toString();
+                            if(insertedBluetoothName.length()==0){
+                                bluetoothText.setError("Questo campo non può essere vuoto");
+                                return;
+                            } else btname= insertedBluetoothName;
+                        } else {
+                            bluetoothSwitch.setChecked(false);
+                            MainActivity.snackBarNav(getActivity(), R.id.send_container,
+                                    "Hai disattivato il bluetooh", Snackbar.LENGTH_LONG, 0);
+                            return;
+                        }
+                    }
+                    dc= new DirectlyConnect(currentFragment, btname, wifiip, wifiSSID, mobileSwitch.isChecked());
+                    dc.startDirectylyConnection();
                 } else MainActivity.snackBarNav(getActivity(), R.id.send_container,
                         "Seleziona almeno un'interfaccia per continuare", Snackbar.LENGTH_LONG, 0);
             }
@@ -293,9 +330,11 @@ public class Send_step_1_manual extends Fragment {
         super.onActivityResult(requestCode, resultCode, data);
         if (requestCode == ACTION_BT_ENABLE) {
             if (resultCode == getActivity().RESULT_CANCELED) {
-                MainActivity.snackBarNav(getActivity(), R.id.send_container, "Acconsenti per continuare", Snackbar.LENGTH_SHORT, 0);
-                Switch bluetoothSwitch = getActivity().findViewById(R.id.checkBox_bluetooth_send);
-                bluetoothSwitch.setChecked(false);
+                if(configuringInterfaces){
+                    Switch bluetoothSwitch = getActivity().findViewById(R.id.checkBox_bluetooth_send);
+                    bluetoothSwitch.setChecked(false);
+                    MainActivity.snackBarNav(getActivity(), R.id.send_container, "Acconsenti per continuare", Snackbar.LENGTH_SHORT, 0);
+                } else dc.handleSomethingWrong("Attivare il bluetooth per continuare");
                 interfaces[2] = false;
             } else {
                 interfaces[2] = true;
@@ -319,9 +358,8 @@ public class Send_step_1_manual extends Fragment {
         TextInputLayout bluetoothLayout = getActivity().findViewById(R.id.input_layout_bluetooth_name);
         TextInputLayout wifiLayout = getActivity().findViewById(R.id.input_layout_wifi_ip);
         Resources r = getActivity().getResources();
-        int[] highs = new int[]{(int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 5, r.getDisplayMetrics()),
-                (int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 59, r.getDisplayMetrics()),
-                (int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 119, r.getDisplayMetrics())};
+        int[] highs = new int[]{(int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 10, r.getDisplayMetrics()),
+                (int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 64, r.getDisplayMetrics())};
         int count = 0;
         if (interfaces[0]) {
             FrameLayout.LayoutParams parameter = (FrameLayout.LayoutParams) wifiLayout.getLayoutParams();
@@ -347,10 +385,6 @@ public class Send_step_1_manual extends Fragment {
     @Override
     public void onDestroy() {
         super.onDestroy();
-        if (BluetoothAdapter.getDefaultAdapter().isDiscovering()) {
-            BluetoothAdapter.getDefaultAdapter().cancelDiscovery();
-        }
-        getContext().unregisterReceiver(mReceiver);
         mListener = null;
     }
 
@@ -360,24 +394,11 @@ public class Send_step_1_manual extends Fragment {
         if (requestCode == MY_PERMISSION_REQUEST_COARSE_LOCATION) {
             if (grantResults.length > 0
                     && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                BluetoothAdapter.getDefaultAdapter().startDiscovery();
+                dc.handleGuaranteedPermission(true);
             } else {
-                if (connectingDialog.isShowing()) {
-                    connectingDialog.cancel();
-                }
-                MainActivity.snackBarNav(getActivity(), R.id.send_container,
-                        "La localizzazione è necessaria per trovare gli altri dispositivi Bluetooth", Snackbar.LENGTH_LONG, 0);
+                dc.handleSomethingWrong("La localizzazione è necessaria per effettuare la connessione");
             }
         }
     }
 
-    public void startBluetoothDiscovery() {
-        found = false;
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            if (ContextCompat.checkSelfPermission(getActivity(), Manifest.permission.ACCESS_COARSE_LOCATION)
-                    != PackageManager.PERMISSION_GRANTED) {
-                requestPermissions(new String[]{Manifest.permission.ACCESS_COARSE_LOCATION}, MY_PERMISSION_REQUEST_COARSE_LOCATION);
-            } else BluetoothAdapter.getDefaultAdapter().startDiscovery();
-        } else BluetoothAdapter.getDefaultAdapter().startDiscovery();
-    }
 }
