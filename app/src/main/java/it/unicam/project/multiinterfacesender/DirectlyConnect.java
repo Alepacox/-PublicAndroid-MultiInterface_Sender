@@ -20,10 +20,10 @@ import android.net.wifi.WifiManager;
 import android.os.Build;
 import android.os.Handler;
 import android.provider.Settings;
+import android.support.design.widget.Snackbar;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentManager;
 import android.support.v4.content.ContextCompat;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.ProgressBar;
@@ -53,6 +53,7 @@ public class DirectlyConnect {
     private WifiManager wifiManager;
     private boolean foundBTdevice;
     private int currentStep;
+    private int skippedInterface;
     private boolean alreadyPaired;
     private BroadcastReceiver wifiReceiver = new BroadcastReceiver() {
         @Override
@@ -61,7 +62,6 @@ public class DirectlyConnect {
             myActivity.unregisterReceiver(this);
             boolean foundNetwork = false;
             for (ScanResult scanResult : results) {
-                Log.e("Found: ", scanResult.BSSID);
                 if (wifiSSID.equals("\"" + scanResult.SSID + "\"")) {
                     foundNetwork = true;
                     List<WifiConfiguration> list = wifiManager.getConfiguredNetworks();
@@ -102,6 +102,7 @@ public class DirectlyConnect {
                 ignoreText.setOnClickListener(new View.OnClickListener() {
                     @Override
                     public void onClick(View view) {
+                        if(avoidConnection()) return;
                         checkStep2();
                     }
                 });
@@ -178,6 +179,16 @@ public class DirectlyConnect {
         alertDialogBuilder.setCancelable(false);
         alertdialog = alertDialogBuilder.create();
         alertdialog.show();
+        this.skippedInterface=0;
+        for (int i=0; i<3; i++){
+            switch (i){
+                case 0: if(btname==null) skippedInterface+=1;
+                break;
+                case 1: if(wifiip==null) skippedInterface+=1;
+                break;
+                case 2: if(!mobileconnection) skippedInterface+=1;
+            }
+        }
         checkStep1();
     }
 
@@ -325,8 +336,11 @@ public class DirectlyConnect {
             public void onClick(View view) {
                 if(currentStep==1){
                     myActivity.unregisterReceiver(wifiReceiver);
+                    if(avoidConnection()) return;
+                    checkStep2();
                 } else {
                     myActivity.unregisterReceiver(bluetoothReceiver);
+                    if(avoidConnection()) return;
                     checkStep3();
                 }
             }
@@ -383,6 +397,7 @@ public class DirectlyConnect {
                                     ignoreText.setOnClickListener(new View.OnClickListener() {
                                         @Override
                                         public void onClick(View view) {
+                                            if(avoidConnection()) return;
                                             alertdialog.dismiss();
                                             fm.beginTransaction()
                                                     .setCustomAnimations(R.anim.enter_from_right, R.anim.exit_to_left, R.anim.enter_from_left, R.anim.exit_to_right)
@@ -414,5 +429,13 @@ public class DirectlyConnect {
                     .addToBackStack(null)
                     .commit();
         }
+    }
+    private boolean avoidConnection(){
+        skippedInterface+=1;
+        if(skippedInterface==3){
+            alertdialog.dismiss();
+            MainActivity.snackBarNav(myActivity, R.id.send_container, "Connessione annullata", Snackbar.LENGTH_SHORT, 0);
+            return true;
+        } else return false;
     }
 }
