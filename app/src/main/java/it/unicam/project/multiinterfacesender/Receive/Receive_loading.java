@@ -5,6 +5,7 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.os.Build;
 import android.os.Handler;
+import android.support.design.widget.Snackbar;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
@@ -15,6 +16,7 @@ import android.view.View;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import it.unicam.project.multiinterfacesender.MainActivity;
 import it.unicam.project.multiinterfacesender.R;
 
 
@@ -131,7 +133,8 @@ public class Receive_loading extends AppCompatActivity {
         }
 
         this.doubleBackToExitPressedOnce = true;
-        Toast.makeText(this, "Premi ancora indietro per chiudere la connessione", Toast.LENGTH_SHORT).show();
+        MainActivity.snackBarNav(this, R.id.container_receive_loading,
+                "Premi ancora indietro per chiudere la connessione", Snackbar.LENGTH_SHORT, 1);
 
         new Handler().postDelayed(new Runnable() {
 
