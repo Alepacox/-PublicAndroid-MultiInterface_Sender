@@ -191,8 +191,8 @@ public class Send_device_list extends Fragment {
                                 public void run() {
                                     Intent i = new Intent(getActivity(), Login.class);
                                     Toast.makeText(getActivity(), R.string.session_expired, Toast.LENGTH_LONG).show();
-                                    i.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
                                     startActivity(i);
+                                    getActivity().finish();
                                 }
                             });
                         }

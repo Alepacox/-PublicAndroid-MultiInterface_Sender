@@ -288,6 +288,7 @@ public class Send_step_1_manual extends Fragment {
                         String wifiSSID = null;
                         String wifiip = null;
                         configuringInterfaces=false;
+                        boolean errorInField=false;
                         if (interfaces[1]) {
                             ConnectivityManager connectionManager = (ConnectivityManager) getActivity().getApplicationContext().getSystemService(Context.CONNECTIVITY_SERVICE);
                             NetworkInfo wifiCheck = connectionManager.getNetworkInfo(ConnectivityManager.TYPE_WIFI);
@@ -295,10 +296,10 @@ public class Send_step_1_manual extends Fragment {
                                 String insertedWifiIp = wifipiText.getText().toString();
                                 if (insertedWifiIp.length() == 0) {
                                     wifipiText.setError("Questo campo non può essere vuoto");
-                                    return;
+                                    errorInField=true;
                                 } else if (!IP_ADDRESS.matcher(insertedWifiIp).matches()) {
                                     wifipiText.setError("Inserisci un indirizzo ip valido");
-                                    return;
+                                    errorInField=true;
                                 } else {
                                     WifiManager wifiManager = (WifiManager) getActivity().getApplicationContext().getSystemService(Context.WIFI_SERVICE);
                                     wifiSSID = wifiManager.getConnectionInfo().getSSID();
@@ -316,7 +317,7 @@ public class Send_step_1_manual extends Fragment {
                                 String insertedBluetoothName = bluetoothText.getText().toString();
                                 if (insertedBluetoothName.length() == 0) {
                                     bluetoothText.setError("Questo campo non può essere vuoto");
-                                    return;
+                                    errorInField=true;
                                 } else btname = insertedBluetoothName;
                             } else {
                                 bluetoothSwitch.setChecked(false);
@@ -325,8 +326,12 @@ public class Send_step_1_manual extends Fragment {
                                 return;
                             }
                         }
-                        dc = new DirectlyConnect(currentFragment, btname, wifiip, wifiSSID, mobileSwitch.isChecked());
-                        dc.startDirectylyConnection();
+                        if(errorInField){
+                            return;
+                        } else{
+                            dc = new DirectlyConnect(currentFragment, btname, wifiip, wifiSSID, mobileSwitch.isChecked());
+                            dc.startDirectylyConnection();
+                        }
                     }
                 } else MainActivity.snackBarNav(getActivity(), R.id.send_container,
                         "Seleziona almeno un'interfaccia per continuare", Snackbar.LENGTH_LONG, 0);

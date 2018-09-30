@@ -44,14 +44,10 @@ public class Receive_step_2 extends Fragment {
     private String uToken;
     private String dToken;
     private String devicename;
+    private Intent myIntent;
     //View
     private TextView textCode;
-    private TextView textGeneratedCode;
-    private ProgressBar progCodeGeneration;
-    private ProgressBar progCodeRefreshing;
-    private FloatingActionButton goNextPageButton;
-    private FloatingActionButton refreshCodeButton;
-    private TextView shareSession;
+    private ProgressBar progGenerateCode;
 
     public interface DataCommunication {
         public String[] getInterfacesDetails();
@@ -107,7 +103,7 @@ public class Receive_step_2 extends Fragment {
     @Override
     public void onViewCreated(View view, Bundle savedInstanceState) {
         final String[] interfacesDetails = mListener.getInterfacesDetails();
-        final Intent myIntent = new Intent(getActivity(), Receive_loading.class);
+        myIntent = new Intent(getActivity(), Receive_loading.class);
         mobileIp= String.valueOf(interfacesDetails[0]);
         wifiIp= String.valueOf(interfacesDetails[1]);
         wifiSSID= String.valueOf(interfacesDetails[2]);
@@ -117,12 +113,7 @@ public class Receive_step_2 extends Fragment {
         myIntent.putExtra("wifiSSID", wifiSSID);
         myIntent.putExtra("bluetoothName", bluetoothName);
         textCode= getActivity().findViewById(R.id.text_generate_code);
-        textGeneratedCode= getActivity().findViewById(R.id.session_code);
-        progCodeGeneration= getActivity().findViewById(R.id.prog_generate_code);
-        progCodeRefreshing= getActivity().findViewById(R.id.prog_refresh_code);
-        goNextPageButton= getActivity().findViewById(R.id.button_session_next);
-        refreshCodeButton = getActivity().findViewById(R.id.button_session_refresh);
-        shareSession = getActivity().findViewById(R.id.text_share_session);
+        progGenerateCode= getActivity().findViewById(R.id.prog_generate_code);
         buttonManual = getActivity().findViewById(R.id.button_receive_manual);
         buttonManual.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -131,9 +122,6 @@ public class Receive_step_2 extends Fragment {
                 getActivity().startActivity(myIntent);
             }
         });
-        CardView sessionCard = getActivity().findViewById(R.id.cardview_session_code);
-        sessionCard.setVisibility(View.INVISIBLE);
-
         TextView devicenameText= getActivity().findViewById(R.id.id_device);
         devicenameText.setText(devicename);
         final ImageView buttonStart = getActivity().findViewById(R.id.button_generate_code);
@@ -141,19 +129,6 @@ public class Receive_step_2 extends Fragment {
             @Override
             public void onClick(View v) {
                 generateSessionCode(false);
-                goNextPageButton.setOnClickListener(new View.OnClickListener() {
-                    @Override
-                    public void onClick(View view) {
-                        myIntent.putExtra("receivingManual", false);
-                        getActivity().startActivity(myIntent);
-                    }
-                });
-                refreshCodeButton.setOnClickListener(new View.OnClickListener() {
-                    @Override
-                    public void onClick(View view) {
-                        generateSessionCode(true);
-                    }
-                });
             }
         });
     }
@@ -181,16 +156,8 @@ public class Receive_step_2 extends Fragment {
     }
 
     public void generateSessionCode(final boolean refreshing){
-        if(refreshing){
-            textGeneratedCode.setVisibility(View.INVISIBLE);
-            progCodeRefreshing.setVisibility(View.VISIBLE);
-            shareSession.setVisibility(View.INVISIBLE);
-            refreshCodeButton.setEnabled(false);
-            goNextPageButton.setEnabled(false);
-        } else {
-            textCode.setVisibility(View.INVISIBLE);
-            progCodeGeneration.setVisibility(View.VISIBLE);
-        }
+        textCode.setVisibility(View.INVISIBLE);
+        progGenerateCode.setVisibility(View.VISIBLE);
         serverTask= new Thread(new Runnable() {
             @Override
             public void run() {
@@ -206,25 +173,12 @@ public class Receive_step_2 extends Fragment {
                                 public void run() {
                                     try{
                                         mListener.setSwipable(false);
-                                        if(refreshing) {
-                                            resetView(true);
-                                        }
-                                        RelativeLayout generateLayout= getActivity().findViewById(R.id.receive_generate_layout);
-                                        generateLayout.setVisibility(View.INVISIBLE);
-                                        buttonManual.setVisibility(View.INVISIBLE);
-                                        textGeneratedCode.setText(sessioncode);
-                                        CardView sessionCard = getActivity().findViewById(R.id.cardview_session_code);
-                                        sessionCard.setVisibility(View.VISIBLE);
-                                        shareSession.setOnClickListener(new View.OnClickListener() {
-                                            @Override
-                                            public void onClick(View view) {
-                                                Intent sendIntent = new Intent();
-                                                sendIntent.setAction(Intent.ACTION_SEND);
-                                                sendIntent.putExtra(Intent.EXTRA_TEXT, "MultiInterface Sender: il mio codice di connessione è "+ sessioncode);
-                                                sendIntent.setType("text/plain");
-                                                startActivity(sendIntent);
-                                            }
-                                        });
+                                        myIntent.putExtra("receivingManual", false);
+                                        myIntent.putExtra("sessioncode", sessioncode);
+                                        getActivity().startActivity(myIntent);
+                                        textCode.setText("Genera codice sessione");
+                                        textCode.setVisibility(View.VISIBLE);
+                                        progGenerateCode.setVisibility(View.INVISIBLE);
                                     } catch (NullPointerException e){
                                     }
                                 }
@@ -235,8 +189,8 @@ public class Receive_step_2 extends Fragment {
                                 public void run() {
                                     Intent i = new Intent(getActivity(), Login.class);
                                     Toast.makeText(getActivity(), R.string.session_expired, Toast.LENGTH_LONG).show();
-                                    i.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
                                     startActivity(i);
+                                    getActivity().finish();
                                 }
                             });
                         }
@@ -245,7 +199,7 @@ public class Receive_step_2 extends Fragment {
                             @Override
                             public void run() {
                                 try{
-                                    resetView(refreshing);
+                                    resetView();
                                     Toast.makeText(getActivity(), R.string.something_wrong, Toast.LENGTH_LONG).show();
                                 } catch (NullPointerException e){}
                             }
@@ -259,7 +213,7 @@ public class Receive_step_2 extends Fragment {
                         @Override
                         public void run() {
                             try{
-                                resetView(refreshing);
+                                resetView();
                                 Toast.makeText(getActivity(), R.string.something_wrong, Toast.LENGTH_LONG).show();
                             } catch (NullPointerException e){}
                         }
@@ -270,18 +224,9 @@ public class Receive_step_2 extends Fragment {
         serverTask.start();
     }
 
-    public void resetView(boolean refreshing){
-        if(refreshing){
-            textGeneratedCode.setVisibility(View.VISIBLE);
-            shareSession.setVisibility(View.VISIBLE);
-            refreshCodeButton.setEnabled(true);
-            goNextPageButton.setEnabled(true);
-            progCodeRefreshing.setVisibility(View.INVISIBLE);
-            goNextPageButton.setVisibility(View.VISIBLE);
-        } else {
-            textCode.setVisibility(View.VISIBLE);
-            textCode.setText("Riprova");
-            progCodeGeneration.setVisibility(View.INVISIBLE);
-        }
+    public void resetView(){
+        textCode.setText("Riprova");
+        textCode.setVisibility(View.VISIBLE);
+        progGenerateCode.setVisibility(View.INVISIBLE);
     }
 }

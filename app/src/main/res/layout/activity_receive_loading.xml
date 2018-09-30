@@ -64,6 +64,7 @@
         android:textColor="@android:color/white"
         android:textSize="18sp"
         android:textStyle="bold"
+        android:visibility="invisible"
         wheel:layout_constraintEnd_toStartOf="@+id/downloading_ip_local_text"
         wheel:layout_constraintStart_toStartOf="parent"
         wheel:layout_constraintTop_toTopOf="parent" />
@@ -79,6 +80,7 @@
         android:textColor="@android:color/white"
         android:textSize="18sp"
         android:textStyle="bold"
+        android:visibility="invisible"
         wheel:layout_constraintEnd_toEndOf="parent"
         wheel:layout_constraintStart_toEndOf="@+id/downloading_ip_remote_text"
         wheel:layout_constraintTop_toTopOf="parent" />
@@ -93,6 +95,7 @@
         android:textColor="@color/colorAccent"
         android:textSize="16sp"
         android:textStyle="bold|italic"
+        android:visibility="invisible"
         wheel:layout_constraintEnd_toEndOf="@+id/downloading_ip_remote_text"
         wheel:layout_constraintStart_toStartOf="@+id/downloading_ip_remote_text"
         wheel:layout_constraintTop_toBottomOf="@+id/downloading_ip_remote_text" />
@@ -107,6 +110,7 @@
         android:textColor="@color/colorAccent"
         android:textSize="16sp"
         android:textStyle="bold|italic"
+        android:visibility="invisible"
         wheel:layout_constraintEnd_toEndOf="@+id/downloading_ip_local_text"
         wheel:layout_constraintStart_toStartOf="@+id/downloading_ip_local_text"
         wheel:layout_constraintTop_toBottomOf="@+id/downloading_ip_local_text" />
@@ -122,6 +126,7 @@
         android:textColor="@android:color/white"
         android:textSize="18sp"
         android:textStyle="bold"
+        android:visibility="invisible"
         wheel:layout_constraintEnd_toEndOf="parent"
         wheel:layout_constraintHorizontal_bias="0.502"
         wheel:layout_constraintStart_toStartOf="parent"
@@ -137,6 +142,7 @@
         android:textColor="@color/colorAccent"
         android:textSize="16sp"
         android:textStyle="bold|italic"
+        android:visibility="invisible"
         wheel:layout_constraintEnd_toEndOf="@+id/downloading_bluetooth_text"
         wheel:layout_constraintStart_toStartOf="@+id/downloading_bluetooth_text"
         wheel:layout_constraintTop_toBottomOf="@+id/downloading_bluetooth_text" />
@@ -172,4 +178,54 @@
         wheel:layout_constraintEnd_toEndOf="@+id/downloading_filename_text"
         wheel:layout_constraintStart_toStartOf="@+id/downloading_filename_text"
         wheel:layout_constraintTop_toBottomOf="@+id/downloading_filename_text" />
+
+    <TextView
+        android:id="@+id/session_code_text"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginEnd="16dp"
+        android:layout_marginStart="16dp"
+        android:layout_marginTop="8dp"
+        android:paddingLeft="10dp"
+        android:paddingRight="10dp"
+        android:text="Il tuo codice sessione è"
+        android:textColor="@android:color/white"
+        android:textSize="16sp"
+        android:textStyle="bold"
+        android:visibility="invisible"
+        wheel:layout_constraintEnd_toEndOf="parent"
+        wheel:layout_constraintStart_toStartOf="parent"
+        wheel:layout_constraintTop_toTopOf="@+id/downloading_ip_remote_text" />
+
+    <TextView
+        android:id="@+id/session_code"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginEnd="8dp"
+        android:layout_marginStart="8dp"
+        android:layout_marginTop="15dp"
+        android:textAlignment="center"
+        android:textColor="@color/colorAccent"
+        android:textSize="30sp"
+        android:textStyle="bold|italic"
+        android:visibility="invisible"
+        wheel:layout_constraintEnd_toEndOf="@+id/session_code_text"
+        wheel:layout_constraintStart_toStartOf="@+id/session_code_text"
+        wheel:layout_constraintTop_toBottomOf="@+id/session_code_text" />
+
+    <TextView
+        android:id="@+id/text_share_session"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginEnd="8dp"
+        android:layout_marginStart="8dp"
+        android:layout_marginTop="15dp"
+        android:text="Condividi"
+        android:textColor="@android:color/white"
+        android:textStyle="bold"
+        android:visibility="invisible"
+        wheel:layout_constraintEnd_toEndOf="parent"
+        wheel:layout_constraintStart_toStartOf="parent"
+        wheel:layout_constraintTop_toBottomOf="@+id/session_code" />
+
 </android.support.constraint.ConstraintLayout>
