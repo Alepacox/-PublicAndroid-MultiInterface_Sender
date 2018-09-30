@@ -1,20 +1,15 @@
 package it.unicam.project.multiinterfacesender.Receive;
 
 
-import android.content.DialogInterface;
 import android.content.Intent;
 import android.os.Build;
 import android.os.Handler;
 import android.support.design.widget.Snackbar;
 import android.support.v4.content.ContextCompat;
-import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
-import android.util.Log;
-import android.view.KeyEvent;
 import android.view.View;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import it.unicam.project.multiinterfacesender.MainActivity;
 import it.unicam.project.multiinterfacesender.R;
@@ -22,10 +17,8 @@ import it.unicam.project.multiinterfacesender.R;
 
 public class Receive_loading extends AppCompatActivity {
     private TextView localAddress;
-    private TextView remoteAddress;
     private TextView bluetoothAddress;
     private TextView localAddressText;
-    private TextView remoteAddressText;
     private TextView bluetoothAddressText;
     private TextView textGeneratedCode;
     private TextView generatedCode;
@@ -47,10 +40,8 @@ public class Receive_loading extends AppCompatActivity {
         Intent intent = getIntent();
         boolean manual= intent.getBooleanExtra("receivingManual", true);
         localAddress = findViewById(R.id.downloading_ip_local);
-        remoteAddress = findViewById(R.id.downloading_ip_remote);
         bluetoothAddress = findViewById(R.id.downloading_bluetooth);
         localAddressText = findViewById(R.id.downloading_ip_local_text);
-        remoteAddressText = findViewById(R.id.downloading_ip_remote_text);
         bluetoothAddressText = findViewById(R.id.downloading_bluetooth_text);
         textGeneratedCode= findViewById(R.id.session_code_text);
         shareSession= findViewById(R.id.text_share_session);
@@ -61,9 +52,8 @@ public class Receive_loading extends AppCompatActivity {
 
         if(manual) {
             String wifiIp = intent.getStringExtra("wifiIp");
-            String mobileIp = intent.getStringExtra("mobileIp");
             String bluetoothName = intent.getStringExtra("bluetoothName");
-            setManualView(wifiIp, mobileIp, bluetoothName);
+            setManualView(wifiIp, bluetoothName);
         } else {
             String sessionCode= intent.getStringExtra("sessioncode");
             setAutoView(sessionCode);
@@ -91,10 +81,8 @@ public class Receive_loading extends AppCompatActivity {
         //Making downloading file visible
         if(comesFromManual){
             localAddress.setVisibility(View.INVISIBLE);
-            remoteAddress.setVisibility(View.INVISIBLE);
             bluetoothAddress.setVisibility(View.INVISIBLE);
             localAddressText.setVisibility(View.INVISIBLE);
-            remoteAddressText.setVisibility(View.INVISIBLE);
             bluetoothAddressText.setVisibility(View.INVISIBLE);
         } else {
             textGeneratedCode.setVisibility(View.INVISIBLE);
@@ -105,21 +93,16 @@ public class Receive_loading extends AppCompatActivity {
         downloadingFileText.setVisibility(View.VISIBLE);
         downloadingFile.setText(downloadingFileName);
     }
-    public void setManualView(String wifiIp, String mobileIp, String bluetoothName){
+    public void setManualView(String wifiIp, String bluetoothName){
         if (!wifiIp.equals("null")) {
             localAddress.setText(wifiIp);
-        }
-        if (mobileIp.equals("true")) {
-            remoteAddress.setText("On");
         }
         if (!bluetoothName.equals("null")) {
             bluetoothAddress.setText(bluetoothName);
         }
         localAddress.setVisibility(View.VISIBLE);
-        remoteAddress.setVisibility(View.VISIBLE);
         bluetoothAddress.setVisibility(View.VISIBLE);
         localAddressText.setVisibility(View.VISIBLE);
-        remoteAddressText.setVisibility(View.VISIBLE);
         bluetoothAddressText.setVisibility(View.VISIBLE);
     }
 

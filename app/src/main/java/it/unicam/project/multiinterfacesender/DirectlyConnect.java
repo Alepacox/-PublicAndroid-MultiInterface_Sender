@@ -1,6 +1,7 @@
 package it.unicam.project.multiinterfacesender;
 
 import android.Manifest;
+import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.bluetooth.BluetoothAdapter;
@@ -10,6 +11,7 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.ServiceConnection;
 import android.content.pm.PackageManager;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
@@ -19,11 +21,15 @@ import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
 import android.os.Build;
 import android.os.Handler;
+import android.os.IBinder;
+import android.os.Message;
+import android.os.RemoteException;
 import android.provider.Settings;
 import android.support.design.widget.Snackbar;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentManager;
 import android.support.v4.content.ContextCompat;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.ProgressBar;
@@ -36,6 +42,10 @@ import java.util.List;
 import java.util.Set;
 
 import it.unicam.project.multiinterfacesender.Send.Send_step_2;
+import it.unicam.project.multiinterfacesender.Service.Bluetooth;
+import it.unicam.project.multiinterfacesender.Service.Wifi;
+
+import static it.unicam.project.multiinterfacesender.Service.Bluetooth.*;
 
 public class DirectlyConnect {
     private Activity myActivity;
@@ -50,11 +60,36 @@ public class DirectlyConnect {
     private ProgressBar progress;
     private FragmentManager fm;
     private AlertDialog alertdialog;
+    //Connection
+    private Bluetooth bluetoothService;
     private WifiManager wifiManager;
     private boolean foundBTdevice;
     private int currentStep;
     private int skippedInterface;
     private boolean alreadyPaired;
+    private final int port= 50000;
+    //AIDL staff
+    protected ServiceConnection wifiServiceConnection;
+
+    @SuppressLint("HandlerLeak")
+    private Handler mHandler = new Handler() {
+        @Override
+        public void handleMessage(Message msg) {
+            switch (msg.what) {
+                case BT_MESSAGE_STATE_CHANGE:
+                    switch (msg.arg1) {
+                        case Bluetooth.BT_STATE_CONNECTED:
+                            myActivity.unregisterReceiver(bluetoothReceiver);
+                            checkStep3();
+                            break;
+                        case Bluetooth.BT_STATE_NOT_FOUND:
+                            handleSomethingWrong("Disposito bluetooth non raggiungibile");
+                            break;
+                    }
+                    break;
+            }
+        }
+    };
     private BroadcastReceiver wifiReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
@@ -75,8 +110,12 @@ public class DirectlyConnect {
                             wifiManager.disableNetwork(id);
                             wifiManager.enableNetwork(i.networkId, true);
                             wifiManager.reconnect();
-                            //CREATE SOCKET CONNECTION
-                            checkStep2();
+                            new Handler().postDelayed(new Runnable() {
+                                @Override
+                                public void run() {
+                                    connectToDeviceOnWifi();
+                                }
+                            }, 1500);
                             break;
                         }
                     }
@@ -131,7 +170,6 @@ public class DirectlyConnect {
                     } catch (InvocationTargetException e) {
                         e.printStackTrace();
                     }
-
                 }
             } else if (BluetoothAdapter.ACTION_DISCOVERY_FINISHED.equals(action) && !foundBTdevice) {
                 handleSomethingWrong("Non sono stato in grado di trovare " + btname);
@@ -143,11 +181,10 @@ public class DirectlyConnect {
         public void onReceive(Context context, Intent intent) {
             BluetoothDevice device = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
             if (device.getBondState() == BluetoothDevice.BOND_BONDED) {
-                //CREATE SOCKET CONNECTION
-                checkStep3();
                 myActivity.unregisterReceiver(this);
+                bluetoothService.connect(device);
             } else if (device.getBondState() == BluetoothDevice.BOND_BONDING) {
-                handleSomethingWrong("Accoppiamento in corso");
+                stepmessage.setText("Accoppiamento in corso");
             }
             else if (device.getBondState() == BluetoothDevice.BOND_NONE) {
                 handleSomethingWrong("Ho bisogno di accoppiarmi con il dispositivo per comunicare con lui");
@@ -164,6 +201,7 @@ public class DirectlyConnect {
         this.mobileconnection = mobileconnection;
         this.fm = currentFragment.getActivity().getSupportFragmentManager();
         this.currentFragment= currentFragment;
+        this.bluetoothService=new Bluetooth(mHandler);
     }
 
     public void startDirectylyConnection() {
@@ -212,8 +250,7 @@ public class DirectlyConnect {
                     if (wifiCheck.isConnected()) {
                         WifiInfo wifiInfo = wifiManager.getConnectionInfo();
                         if (wifiSSID.equals(wifiInfo.getSSID())) {
-                            //CREATE SOCKET CONNECTION
-                            checkStep2();
+                            connectToDeviceOnWifi();
                         } else {
                             stepmessage.setText("Mi sto connettendo alla rete " + wifiSSID);
                             new Handler().postDelayed(new Runnable() {
@@ -250,6 +287,46 @@ public class DirectlyConnect {
 
     }
 
+    public void connectToDeviceOnWifi(){
+        Intent wifiIntent= new Intent(myActivity, Wifi.class);
+        MainActivity.wifiServiceIntent=wifiIntent;
+        wifiServiceConnection= new ServiceConnection() {
+            @Override
+            public void onServiceConnected(ComponentName componentName, IBinder iBinder) {
+                IService_App_to_Wifi iService_app_to_wifi = IService_App_to_Wifi.Stub.asInterface(iBinder);
+                IService_Wifi_to_App iService_wifi_to_app = new IService_Wifi_to_App.Stub() {
+                    @Override
+                    public void wifiHandler(int code) throws RemoteException {
+                        switch (code){
+                            case 11:
+                                iService_app_to_wifi.connect();
+                                break;
+                            case 12:
+                                myActivity.unbindService(wifiServiceConnection);
+                                myActivity.unregisterReceiver(wifiReceiver);
+                                checkStep2();
+                                break;
+                            case 13:
+                                handleSomethingWrong("Non sono stato in grado di connettermi al dispositvo sulla Wifi");
+                                break;
+                        }
+                    }
+                };
+                try {
+                    iService_app_to_wifi.register(iService_wifi_to_app);
+                    iService_app_to_wifi.createConnection(wifiip, port);
+                } catch (RemoteException e) {
+                    e.printStackTrace();
+                }
+            }
+            @Override
+            public void onServiceDisconnected(ComponentName componentName) {
+            }
+        };
+        myActivity.startService(wifiIntent);
+        myActivity.bindService(wifiIntent, wifiServiceConnection, Context.BIND_IMPORTANT);
+    }
+
     public void checkStep2() {
         //Bluetooth
         if (btname != null) {
@@ -261,8 +338,12 @@ public class DirectlyConnect {
             BluetoothAdapter btadapter = BluetoothAdapter.getDefaultAdapter();
             Set<BluetoothDevice> bondedDevice = btadapter.getBondedDevices();
             alreadyPaired = false;
+            BluetoothDevice pairedDevice= null;
             for (BluetoothDevice i : bondedDevice) {
-                if (btname.equals(i.getName())) alreadyPaired = true;
+                if (btname.equals(i.getName())) {
+                    alreadyPaired = true;
+                    pairedDevice=i;
+                }
             }
             progress.setVisibility(View.VISIBLE);
             retryText.setVisibility(View.INVISIBLE);
@@ -280,12 +361,11 @@ public class DirectlyConnect {
                         } else btadapter.startDiscovery();
                     } else btadapter.startDiscovery();
                 } else {
-                    new Handler().postDelayed(new Runnable() {
+                BluetoothDevice finalPairedDevice = pairedDevice;
+                new Handler().postDelayed(new Runnable() {
                         @Override
                         public void run() {
-                            myActivity.unregisterReceiver(bluetoothReceiver);
-                            //CREATE SOCKET CONNECTION
-                            checkStep3();
+                            bluetoothService.connect(finalPairedDevice);
                         }
                     }, 1500);
                 }

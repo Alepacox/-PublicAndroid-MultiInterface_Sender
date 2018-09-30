@@ -6,6 +6,7 @@ import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.support.v4.app.Fragment;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -46,9 +47,10 @@ public class Send_step_1_auto extends Fragment {
     public interface DataCommunication {
         public String getUToken();
         public String getDToken();
+        public void setWifiServiceIntent(Intent intent);
     }
 
-    private DataCommunication mListener;
+    public DataCommunication mListener;
 
     public Send_step_1_auto() {
         // Required empty public constructor
@@ -141,16 +143,26 @@ public class Send_step_1_auto extends Fragment {
                             if (output != null) {
                                 JSONObject object = (JSONObject) new JSONTokener(output).nextValue();
                                 if (!object.getString("message").equals("unauthorized")) {
-                                    final String btName = object.getString("btname");
-                                    JSONArray jsonArray = object.getJSONArray("wifiip");
-                                    final String wifiip= jsonArray.getString(0);
-                                    final String wifiSSID= jsonArray.getString(1);
+                                    String btname=null;
+                                    if(!object.getString("btname").equals("null")){
+                                        btname=object.getString("btname");
+                                    }
+                                    String wifiip= null;
+                                    String wifiSSID=null;
+                                    if(!object.getString("wifiip").equals("null")){
+                                        JSONArray jsonArray = object.getJSONArray("wifiip");
+                                        wifiip= jsonArray.getString(0);
+                                        wifiSSID= jsonArray.getString(1);
+                                    }
                                     final boolean mobileip = object.getBoolean("mobileip");
+                                    String finalWifiip = wifiip;
+                                    String finalWifiSSID = wifiSSID;
+                                    String finalbtname= btname;
                                     getActivity().runOnUiThread(new Runnable() {
                                         @Override
                                         public void run() {
                                             progressDialog.dismiss();
-                                            dc= new DirectlyConnect(currentFragment, btName, wifiip, wifiSSID, mobileip);
+                                            dc= new DirectlyConnect(currentFragment, finalbtname, finalWifiip, finalWifiSSID, mobileip);
                                             dc.startDirectylyConnection();
                                         }
                                     });

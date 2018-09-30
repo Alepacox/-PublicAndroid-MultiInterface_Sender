@@ -1,10 +1,13 @@
 package it.unicam.project.multiinterfacesender;
 
+import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Build;
+import android.os.Handler;
+import android.os.Message;
 import android.support.annotation.RequiresApi;
 import android.support.design.widget.AppBarLayout;
 import android.support.design.widget.TabLayout;
@@ -63,9 +66,6 @@ public class MainActivity extends AppCompatActivity implements Receive.DataCommu
     private String uToken;
     private String dToken;
     //Sender variables
-    private boolean usingWifi;
-    private boolean usingMobile;
-    private boolean usingBluetooth;
     private boolean firstTimeManual=true;
     //Receiver variables
     private String wifiIp;
@@ -73,6 +73,9 @@ public class MainActivity extends AppCompatActivity implements Receive.DataCommu
     private boolean mobileIp;
     private String bluetoothName;
     private RWStorage rw;
+    //AIDL stuff
+    public static Intent wifiServiceIntent;
+    public static Intent mobileServiceIntent;
 
 
 
@@ -144,10 +147,8 @@ public class MainActivity extends AppCompatActivity implements Receive.DataCommu
     }
 
     @Override
-    public void setInterfaces(boolean[] value) {
-        this.usingWifi=value[0];
-        this.usingMobile=value[1];
-        this.usingBluetooth=value[2];
+    public void setWifiServiceIntent(Intent intent) {
+        this.wifiServiceIntent=intent;
     }
 
     @Override

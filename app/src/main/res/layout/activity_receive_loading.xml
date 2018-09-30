@@ -55,17 +55,17 @@
         wheel:layout_constraintTop_toTopOf="@+id/circle_receive_loading" />
 
     <TextView
-        android:id="@+id/downloading_ip_remote_text"
+        android:id="@+id/downloading_bluetooth_text"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginEnd="8dp"
-        android:layout_marginStart="8dp"
-        android:layout_marginTop="35dp"
-        android:text="Rete mobile"
+        android:layout_marginStart="5dp"
+        android:layout_marginTop="60dp"
+        android:text="Nome Bluetooth"
         android:textColor="@android:color/white"
         android:textSize="18sp"
         android:textStyle="bold"
-        android:visibility="invisible"
+        android:visibility="visible"
         wheel:layout_constraintEnd_toStartOf="@+id/downloading_ip_local_text"
         wheel:layout_constraintStart_toStartOf="parent"
         wheel:layout_constraintTop_toTopOf="parent" />
@@ -76,30 +76,32 @@
         android:layout_height="wrap_content"
         android:layout_marginEnd="8dp"
         android:layout_marginStart="8dp"
-        android:layout_marginTop="35dp"
+        android:layout_marginTop="60dp"
         android:text="IP Locale"
         android:textColor="@android:color/white"
         android:textSize="18sp"
         android:textStyle="bold"
-        android:visibility="invisible"
+        android:visibility="visible"
         wheel:layout_constraintEnd_toEndOf="parent"
-        wheel:layout_constraintStart_toEndOf="@+id/downloading_ip_remote_text"
+        wheel:layout_constraintStart_toEndOf="@+id/downloading_bluetooth_text"
         wheel:layout_constraintTop_toTopOf="parent" />
 
     <TextView
-        android:id="@+id/downloading_ip_remote"
-        android:layout_width="wrap_content"
+        android:id="@+id/downloading_bluetooth"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_marginEnd="8dp"
         android:layout_marginStart="8dp"
         android:text="@string/off"
+        android:textAlignment="center"
+        android:textAllCaps="false"
         android:textColor="@color/colorAccent"
         android:textSize="16sp"
         android:textStyle="bold|italic"
-        android:visibility="invisible"
-        wheel:layout_constraintEnd_toEndOf="@+id/downloading_ip_remote_text"
-        wheel:layout_constraintStart_toStartOf="@+id/downloading_ip_remote_text"
-        wheel:layout_constraintTop_toBottomOf="@+id/downloading_ip_remote_text" />
+        android:visibility="visible"
+        wheel:layout_constraintEnd_toEndOf="@+id/downloading_bluetooth_text"
+        wheel:layout_constraintStart_toStartOf="@+id/downloading_bluetooth_text"
+        wheel:layout_constraintTop_toBottomOf="@+id/downloading_bluetooth_text" />
 
     <TextView
         android:id="@+id/downloading_ip_local"
@@ -108,45 +110,14 @@
         android:layout_marginEnd="8dp"
         android:layout_marginStart="8dp"
         android:text="@string/off"
+        android:textAllCaps="false"
         android:textColor="@color/colorAccent"
         android:textSize="16sp"
         android:textStyle="bold|italic"
-        android:visibility="invisible"
+        android:visibility="visible"
         wheel:layout_constraintEnd_toEndOf="@+id/downloading_ip_local_text"
         wheel:layout_constraintStart_toStartOf="@+id/downloading_ip_local_text"
         wheel:layout_constraintTop_toBottomOf="@+id/downloading_ip_local_text" />
-
-    <TextView
-        android:id="@+id/downloading_bluetooth_text"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginEnd="8dp"
-        android:layout_marginStart="8dp"
-        android:layout_marginTop="25dp"
-        android:text="Nome Bluetooth"
-        android:textColor="@android:color/white"
-        android:textSize="18sp"
-        android:textStyle="bold"
-        android:visibility="invisible"
-        wheel:layout_constraintEnd_toEndOf="parent"
-        wheel:layout_constraintHorizontal_bias="0.502"
-        wheel:layout_constraintStart_toStartOf="parent"
-        wheel:layout_constraintTop_toBottomOf="@+id/downloading_ip_remote" />
-
-    <TextView
-        android:id="@+id/downloading_bluetooth"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginEnd="8dp"
-        android:layout_marginStart="8dp"
-        android:text="@string/off"
-        android:textColor="@color/colorAccent"
-        android:textSize="16sp"
-        android:textStyle="bold|italic"
-        android:visibility="invisible"
-        wheel:layout_constraintEnd_toEndOf="@+id/downloading_bluetooth_text"
-        wheel:layout_constraintStart_toStartOf="@+id/downloading_bluetooth_text"
-        wheel:layout_constraintTop_toBottomOf="@+id/downloading_bluetooth_text" />
 
     <TextView
         android:id="@+id/downloading_filename_text"
@@ -196,7 +167,7 @@
         android:visibility="invisible"
         wheel:layout_constraintEnd_toEndOf="parent"
         wheel:layout_constraintStart_toStartOf="parent"
-        wheel:layout_constraintTop_toTopOf="@+id/downloading_ip_remote_text" />
+        wheel:layout_constraintTop_toTopOf="@+id/downloading_bluetooth_text" />
 
     <TextView
         android:id="@+id/session_code"

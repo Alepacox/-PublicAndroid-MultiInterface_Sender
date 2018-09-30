@@ -59,9 +59,9 @@ public class Send_step_1_manual extends Fragment {
     private static final String ARG_PARAM2 = "param2";
     private DataCommunication mListener;
     private CheckBox bluetoothSwitch;
-    private CheckBox mobileSwitch;
     private CheckBox wifiSwitch;
-    private boolean[] interfaces = {false, false, false};
+    private boolean usingWifi;
+    private boolean usingBluetooth;
     private ExpandableLayout interfaceExapandableLayout;
     private ExpandableLayout paramsExapandableLayout;
     private static final Pattern IP_ADDRESS
@@ -80,8 +80,6 @@ public class Send_step_1_manual extends Fragment {
     private int MY_PERMISSION_REQUEST_COARSE_LOCATION = 5489;
 
     public interface DataCommunication {
-        public void setInterfaces(boolean[] value);
-
         public boolean isTheFirstTimeManual();
     }
 
@@ -137,7 +135,8 @@ public class Send_step_1_manual extends Fragment {
             alertDialog.setTitle("Modalità manuale");
             alertDialog.setMessage("Sincronizza le interfacce da utilizzare " +
                     "con quelle del ricevente ed inserisci i parametri visibili" +
-                    "sul suo schermo una volta in ascolto");
+                    "sul suo schermo una volta in ascolto. \nL'uso della rete mobile" +
+                    " è disabilitato.");
 
             alertDialog.setIcon(R.mipmap.ic_launcher);
             alertDialog.setPositiveButton("OK",
@@ -209,35 +208,8 @@ public class Send_step_1_manual extends Fragment {
                     if (!BluetoothAdapter.getDefaultAdapter().isEnabled()) {
                         Intent discoverableIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
                         startActivityForResult(discoverableIntent, ACTION_BT_ENABLE);
-                    } else interfaces[2] = true;
-                } else interfaces[2] = false;
-            }
-        }));
-        mobileSwitch = getActivity().findViewById(R.id.checkBox_mobile_send);
-        mobileSwitch.setOnCheckedChangeListener((new CompoundButton.OnCheckedChangeListener() {
-            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                if (isChecked) {
-                    ConnectivityManager cm = (ConnectivityManager) getActivity().getApplicationContext().getSystemService(Context.CONNECTIVITY_SERVICE);
-                    try {
-                        boolean isDataEnabled = false;
-                        try {
-                            Class<?> c = Class.forName(cm.getClass().getName());
-                            Method m = c.getDeclaredMethod("getMobileDataEnabled");
-                            m.setAccessible(true);
-                            isDataEnabled = (Boolean) m.invoke(cm);
-                        } catch (NoSuchMethodException e) {
-                            isDataEnabled = Settings.Global.getInt(getContext().getContentResolver(), "mobile_data", 0) == 1;
-                        }
-                        if (!isDataEnabled) {
-                            Toast.makeText(getActivity(), "Attiva la rete mobile per procedere", Toast.LENGTH_LONG).show();
-                            startActivity(new Intent().setComponent(new ComponentName("com.android.settings", "com.android.settings.Settings$DataUsageSummaryActivity")));
-                            mobileSwitch.setChecked(false);
-                            interfaces[0] = false;
-                        } else interfaces[0] = true;
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                    }
-                } else interfaces[0] = false;
+                    } else usingBluetooth = true;
+                } else usingBluetooth = false;
             }
         }));
         wifiSwitch = getActivity().findViewById(R.id.checkBox_wifi_send);
@@ -250,9 +222,9 @@ public class Send_step_1_manual extends Fragment {
                         Toast.makeText(getActivity(), "Connettiti ad una wifi per procedere", Toast.LENGTH_LONG).show();
                         startActivity(new Intent(Settings.ACTION_WIFI_SETTINGS));
                         wifiSwitch.setChecked(false);
-                        interfaces[1] = false;
-                    } else interfaces[1] = true;
-                } else interfaces[1] = false;
+                        usingWifi = false;
+                    } else usingWifi = true;
+                } else usingWifi = false;
             }
         }));
         final CardView paramsCard = getActivity().findViewById(R.id.cardParams);
@@ -261,7 +233,7 @@ public class Send_step_1_manual extends Fragment {
             @Override
             public void onClick(View v) {
                 if (!paramsExapandableLayout.isExpanded()) {
-                    if (interfaces[0] || interfaces[1] || interfaces[2]) {
+                    if (usingWifi || usingBluetooth) {
                         if (interfaceExapandableLayout.isExpanded()) {
                             interfaceExapandableLayout.collapse();
                         }
@@ -278,7 +250,7 @@ public class Send_step_1_manual extends Fragment {
         buttonConnect.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                if ((interfaces[0] || interfaces[1] || interfaces[2])) {
+                if (usingWifi || usingBluetooth) {
                     if(interfaceExapandableLayout.isExpanded()) {
                         interfaceExapandableLayout.collapse();
                         updateTextInputByChoosenInterfaces();
@@ -289,7 +261,7 @@ public class Send_step_1_manual extends Fragment {
                         String wifiip = null;
                         configuringInterfaces=false;
                         boolean errorInField=false;
-                        if (interfaces[1]) {
+                        if (usingWifi) {
                             ConnectivityManager connectionManager = (ConnectivityManager) getActivity().getApplicationContext().getSystemService(Context.CONNECTIVITY_SERVICE);
                             NetworkInfo wifiCheck = connectionManager.getNetworkInfo(ConnectivityManager.TYPE_WIFI);
                             if (wifiCheck.isConnected()) {
@@ -312,7 +284,7 @@ public class Send_step_1_manual extends Fragment {
                                 return;
                             }
                         }
-                        if (interfaces[2]) {
+                        if (usingBluetooth) {
                             if (BluetoothAdapter.getDefaultAdapter().isEnabled()) {
                                 String insertedBluetoothName = bluetoothText.getText().toString();
                                 if (insertedBluetoothName.length() == 0) {
@@ -329,7 +301,7 @@ public class Send_step_1_manual extends Fragment {
                         if(errorInField){
                             return;
                         } else{
-                            dc = new DirectlyConnect(currentFragment, btname, wifiip, wifiSSID, mobileSwitch.isChecked());
+                            dc = new DirectlyConnect(currentFragment, btname, wifiip, wifiSSID, false);
                             dc.startDirectylyConnection();
                         }
                     }
@@ -382,14 +354,14 @@ public class Send_step_1_manual extends Fragment {
         int[] highs = new int[]{(int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 10, r.getDisplayMetrics()),
                 (int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 64, r.getDisplayMetrics())};
         int count = 0;
-        if (interfaces[1]) {
+        if (usingWifi) {
             FrameLayout.LayoutParams parameter = (FrameLayout.LayoutParams) wifiLayout.getLayoutParams();
             parameter.setMargins(parameter.leftMargin, highs[count], parameter.rightMargin, parameter.bottomMargin);
             wifiLayout.setLayoutParams(parameter);
             count++;
             wifiLayout.setVisibility(View.VISIBLE);
         } else wifiLayout.setVisibility(View.INVISIBLE);
-        if (interfaces[2]) {
+        if (usingBluetooth) {
             FrameLayout.LayoutParams parameter = (FrameLayout.LayoutParams) bluetoothLayout.getLayoutParams();
             parameter.setMargins(parameter.leftMargin, highs[count], parameter.rightMargin, parameter.bottomMargin);
             bluetoothLayout.setLayoutParams(parameter);
@@ -406,9 +378,9 @@ public class Send_step_1_manual extends Fragment {
                     bluetoothSwitch.setChecked(false);
                     MainActivity.snackBarNav(getActivity(), R.id.send_container, "Acconsenti per continuare", Snackbar.LENGTH_SHORT, 0);
                 } else dc.handleSomethingWrong("Attivare il bluetooth per continuare");
-                interfaces[2] = false;
+                usingBluetooth = false;
             } else {
-                interfaces[2] = true;
+                usingBluetooth = true;
             }
         }
 

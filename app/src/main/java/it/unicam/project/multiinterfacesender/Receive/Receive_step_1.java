@@ -59,6 +59,7 @@ public class Receive_step_1 extends Fragment {
     private String wifiIp;
     private String wifiSSID;
     private String bluetoothName;
+    private boolean noLoginMode;
     private int ACTION_BT= 56;
 
     public interface DataCommunication {
@@ -97,6 +98,7 @@ public class Receive_step_1 extends Fragment {
             mParam1 = getArguments().getString(ARG_PARAM1);
             mParam2 = getArguments().getString(ARG_PARAM2);
         }
+        noLoginMode= mListener.getNoLoginMode();
     }
 
     @Override
@@ -121,13 +123,13 @@ public class Receive_step_1 extends Fragment {
                 }
             }));
         final CheckBox mobileCheckbox= getActivity().findViewById(R.id.checkBox_mobile);
-        mobileCheckbox.setOnCheckedChangeListener((new CompoundButton.OnCheckedChangeListener() {
-            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                if(isChecked) {
-                    ConnectivityManager cm = (ConnectivityManager) getActivity().getApplicationContext().getSystemService(Context.CONNECTIVITY_SERVICE);
+        if(!noLoginMode){
+            mobileCheckbox.setOnCheckedChangeListener((new CompoundButton.OnCheckedChangeListener() {
+                public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                    if(isChecked) {
+                        ConnectivityManager cm = (ConnectivityManager) getActivity().getApplicationContext().getSystemService(Context.CONNECTIVITY_SERVICE);
                         NetworkInfo mobileCheck = cm.getNetworkInfo(ConnectivityManager.TYPE_MOBILE);
                         if (!mobileCheck.isConnected()) {
-                            Log.e("Inside", "");
                             try {
                                 Class cmClass = Class.forName(cm.getClass().getName());
                                 Method method = cmClass.getDeclaredMethod("getMobileDataEnabled");
@@ -139,8 +141,12 @@ public class Receive_step_1 extends Fragment {
                                 }
                             } catch (Exception e) { }
                         }
-                }
-        }}));
+                    }
+                }}));
+        } else {
+            mobileCheckbox.setEnabled(false);
+        }
+
         final CheckBox wifiCheckbox= getActivity().findViewById(R.id.checkBox_wifi);
         wifiCheckbox.setOnCheckedChangeListener((new CompoundButton.OnCheckedChangeListener() {
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
@@ -173,7 +179,7 @@ public class Receive_step_1 extends Fragment {
             public void onClick(View v) {
                 if (wifiCheckbox.isChecked() || mobileCheckbox.isChecked() || bluetoothCheckbox.isChecked()) {
                     mListener.setInterfacesDetails(mobileCheckbox.isChecked(), wifiIp, wifiSSID, bluetoothName);
-                    if(!mListener.getNoLoginMode()) {
+                    if(!noLoginMode) {
                         getActivity().getSupportFragmentManager().beginTransaction()
                                 .setCustomAnimations(R.anim.enter_from_right, R.anim.exit_to_left, R.anim.enter_from_left, R.anim.exit_to_right)
                                 .replace(R.id.receive_container, new Receive_step_2(), "")
