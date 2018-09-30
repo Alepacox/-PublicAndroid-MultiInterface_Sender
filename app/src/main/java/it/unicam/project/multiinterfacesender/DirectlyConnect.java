@@ -299,15 +299,34 @@ public class DirectlyConnect {
                     public void wifiHandler(int code) throws RemoteException {
                         switch (code){
                             case 11:
-                                iService_app_to_wifi.connect();
+                                myActivity.runOnUiThread(new Runnable() {
+                                    @Override
+                                    public void run() {
+                                        try {
+                                            iService_app_to_wifi.connect();
+                                        } catch (RemoteException e) {
+                                            e.printStackTrace();
+                                        }
+                                    }
+                                });
                                 break;
                             case 12:
                                 myActivity.unbindService(wifiServiceConnection);
                                 myActivity.unregisterReceiver(wifiReceiver);
-                                checkStep2();
+                                myActivity.runOnUiThread(new Runnable() {
+                                    @Override
+                                    public void run() {
+                                        checkStep2();
+                                    }
+                                });
                                 break;
                             case 13:
-                                handleSomethingWrong("Non sono stato in grado di connettermi al dispositvo sulla Wifi");
+                                myActivity.runOnUiThread(new Runnable() {
+                                    @Override
+                                    public void run() {
+                                        handleSomethingWrong("Non sono stato in grado di connettermi al dispositvo sulla Wifi");
+                                    }
+                                });
                                 break;
                         }
                     }
