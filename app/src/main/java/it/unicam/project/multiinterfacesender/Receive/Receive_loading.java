@@ -1,14 +1,19 @@
 package it.unicam.project.multiinterfacesender.Receive;
 
 
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.os.Build;
+import android.os.Handler;
 import android.support.v4.content.ContextCompat;
+import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.KeyEvent;
 import android.view.View;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import it.unicam.project.multiinterfacesender.R;
 
@@ -25,6 +30,7 @@ public class Receive_loading extends AppCompatActivity {
     private TextView shareSession;
     private TextView downloadingFileText;
     private TextView downloadingFile;
+    private boolean blocked;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -49,7 +55,8 @@ public class Receive_loading extends AppCompatActivity {
         generatedCode= findViewById(R.id.session_code);
         downloadingFileText = findViewById(R.id.downloading_filename_text);
         downloadingFile = findViewById(R.id.downloading_filename);
-        
+        blocked=true;
+
         if(manual) {
             String wifiIp = intent.getStringExtra("wifiIp");
             String mobileIp = intent.getStringExtra("mobileIp");
@@ -112,5 +119,26 @@ public class Receive_loading extends AppCompatActivity {
         localAddressText.setVisibility(View.VISIBLE);
         remoteAddressText.setVisibility(View.VISIBLE);
         bluetoothAddressText.setVisibility(View.VISIBLE);
+    }
+
+    boolean doubleBackToExitPressedOnce = false;
+
+    @Override
+    public void onBackPressed() {
+        if (doubleBackToExitPressedOnce) {
+            super.onBackPressed();
+            return;
+        }
+
+        this.doubleBackToExitPressedOnce = true;
+        Toast.makeText(this, "Premi ancora indietro per chiudere la connessione", Toast.LENGTH_SHORT).show();
+
+        new Handler().postDelayed(new Runnable() {
+
+            @Override
+            public void run() {
+                doubleBackToExitPressedOnce=false;
+            }
+        }, 2000);
     }
 }

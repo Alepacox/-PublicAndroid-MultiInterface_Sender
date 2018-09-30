@@ -128,7 +128,7 @@ public class Receive_step_2 extends Fragment {
         buttonStart.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                generateSessionCode(false);
+                generateSessionCode();
             }
         });
     }
@@ -155,7 +155,7 @@ public class Receive_step_2 extends Fragment {
         }
     }
 
-    public void generateSessionCode(final boolean refreshing){
+    public void generateSessionCode(){
         textCode.setVisibility(View.INVISIBLE);
         progGenerateCode.setVisibility(View.VISIBLE);
         serverTask= new Thread(new Runnable() {

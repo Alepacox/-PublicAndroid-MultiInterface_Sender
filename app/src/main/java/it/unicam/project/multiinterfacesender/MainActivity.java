@@ -286,17 +286,6 @@ public class MainActivity extends AppCompatActivity implements Receive.DataCommu
         snackbar.show();
     }
 
-    @Override
-    public boolean onKeyDown(int keyCode, KeyEvent event)  {
-        Log.e("Key", "pressed");
-        android.app.Fragment myFragment = getFragmentManager().findFragmentByTag("SEND_STEP_2");
-        if (myFragment != null && myFragment.isVisible()) {
-            Log.e("Fragment", "VISIBLE");
-            Toast.makeText(getApplicationContext(), "Button pressed", Toast.LENGTH_SHORT);
-            return false;
-        } else return super.onKeyDown(keyCode, event);
-    }
-
     public void logout() {
         rw.deleteUserToken();
         Intent i = new Intent(this, Login.class);
