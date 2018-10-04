@@ -12,6 +12,7 @@ import android.os.Handler;
 import android.os.IBinder;
 import android.os.RemoteException;
 import android.support.annotation.Nullable;
+import android.util.Log;
 
 import java.io.IOException;
 import java.io.ObjectInputStream;
@@ -99,11 +100,15 @@ public class Wifi extends Service {
                             }
                         }
                     }
-                    try {
-                        Wifi.this.iService_wifi_to_app.wifiHandler(WIFI_STATE_ESTABILISHED);
-                    } catch (RemoteException e) {
-                        e.printStackTrace();
-                    }
+                        final Handler handler = new Handler(Wifi.this.getMainLooper());
+                        handler.post(() -> {
+                            try {
+                                Log.e("I'm here", "inside wifi, sending handler");
+                                Wifi.this.iService_wifi_to_app.wifiHandler(WIFI_STATE_ESTABILISHED);
+                            } catch (RemoteException e) {
+                                e.printStackTrace();
+                            }
+                        });
                     while (keepAlive) {
                         try {
                             Thread.sleep(30000);

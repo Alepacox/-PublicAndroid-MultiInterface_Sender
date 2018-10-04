@@ -342,8 +342,8 @@ public class DirectlyConnect {
             public void onServiceDisconnected(ComponentName componentName) {
             }
         };
-        myActivity.startService(wifiIntent);
         myActivity.bindService(wifiIntent, wifiServiceConnection, Context.BIND_IMPORTANT);
+        myActivity.startService(wifiIntent);
     }
 
     public void checkStep2() {
@@ -434,6 +434,7 @@ public class DirectlyConnect {
             @Override
             public void onClick(View view) {
                 if(currentStep==1){
+                    //TODO: Handle this to not unregister if no passing through wifiscan
                     myActivity.unregisterReceiver(wifiReceiver);
                     if(avoidConnection()) return;
                     checkStep2();
