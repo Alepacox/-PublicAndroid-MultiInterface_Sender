@@ -68,8 +68,15 @@ public class DirectlyConnect {
     private int skippedInterface;
     private boolean alreadyPaired;
     private final int port= 50000;
+    private boolean wifiHandlerRegistered=false;
+    private boolean btHandlerRegistered=false;
     //AIDL staff
-    protected ServiceConnection wifiServiceConnection;
+    public static ServiceConnection wifiServiceConnection;
+    private static IService_App_to_Wifi iService_app_to_wifi;
+    private IService_Wifi_to_App iService_wifi_to_app;
+    private volatile boolean wifi_connectionCreated=false;
+    private volatile boolean wifi_connectionEstablished=false;
+    private static volatile boolean wifi_connectionRefused=false;
 
     @SuppressLint("HandlerLeak")
     private Handler mHandler = new Handler() {
@@ -80,6 +87,7 @@ public class DirectlyConnect {
                     switch (msg.arg1) {
                         case Bluetooth.BT_STATE_CONNECTED:
                             myActivity.unregisterReceiver(bluetoothReceiver);
+                            btHandlerRegistered=false;
                             checkStep3();
                             break;
                         case Bluetooth.BT_STATE_NOT_FOUND:
@@ -95,6 +103,7 @@ public class DirectlyConnect {
         public void onReceive(Context context, Intent intent) {
             List<ScanResult> results = wifiManager.getScanResults();
             myActivity.unregisterReceiver(this);
+            wifiHandlerRegistered=false;
             boolean foundNetwork = false;
             for (ScanResult scanResult : results) {
                 if (wifiSSID.equals("\"" + scanResult.SSID + "\"")) {
@@ -182,6 +191,7 @@ public class DirectlyConnect {
             BluetoothDevice device = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
             if (device.getBondState() == BluetoothDevice.BOND_BONDED) {
                 myActivity.unregisterReceiver(this);
+                btHandlerRegistered=false;
                 bluetoothService.connect(device);
             } else if (device.getBondState() == BluetoothDevice.BOND_BONDING) {
                 stepmessage.setText("Accoppiamento in corso");
@@ -257,6 +267,7 @@ public class DirectlyConnect {
                                 @Override
                                 public void run() {
                                     myActivity.registerReceiver(wifiReceiver, new IntentFilter(WifiManager.SCAN_RESULTS_AVAILABLE_ACTION));
+                                    wifiHandlerRegistered=true;
                                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
                                         if (ContextCompat.checkSelfPermission(myActivity, Manifest.permission.ACCESS_COARSE_LOCATION)
                                                 != PackageManager.PERMISSION_GRANTED) {
@@ -272,6 +283,7 @@ public class DirectlyConnect {
                             @Override
                             public void run() {
                                 myActivity.registerReceiver(wifiReceiver, new IntentFilter(WifiManager.SCAN_RESULTS_AVAILABLE_ACTION));
+                                wifiHandlerRegistered=true;
                                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
                                     if (ContextCompat.checkSelfPermission(myActivity, Manifest.permission.ACCESS_COARSE_LOCATION)
                                             != PackageManager.PERMISSION_GRANTED) {
@@ -288,43 +300,30 @@ public class DirectlyConnect {
     }
 
     public void connectToDeviceOnWifi(){
+        stepmessage.setText("Sto cercando di trovare il dispositivo sulla wifi");
         Intent wifiIntent= new Intent(myActivity, Wifi.class);
         MainActivity.wifiServiceIntent=wifiIntent;
         wifiServiceConnection= new ServiceConnection() {
             @Override
             public void onServiceConnected(ComponentName componentName, IBinder iBinder) {
-                IService_App_to_Wifi iService_app_to_wifi = IService_App_to_Wifi.Stub.asInterface(iBinder);
-                IService_Wifi_to_App iService_wifi_to_app = new IService_Wifi_to_App.Stub() {
+                iService_app_to_wifi = IService_App_to_Wifi.Stub.asInterface(iBinder);
+                iService_wifi_to_app = new IService_Wifi_to_App.Stub() {
                     @Override
                     public void wifiHandler(int code) throws RemoteException {
                         switch (code){
                             case 11:
-                                myActivity.runOnUiThread(new Runnable() {
-                                    @Override
-                                    public void run() {
-                                        try {
-                                            iService_app_to_wifi.connect();
-                                        } catch (RemoteException e) {
-                                            e.printStackTrace();
-                                        }
-                                    }
-                                });
+                                wifi_connectionCreated=true;
                                 break;
                             case 12:
+                                wifi_connectionEstablished=true;
                                 myActivity.unbindService(wifiServiceConnection);
-                                myActivity.unregisterReceiver(wifiReceiver);
-                                myActivity.runOnUiThread(new Runnable() {
-                                    @Override
-                                    public void run() {
-                                        checkStep2();
-                                    }
-                                });
                                 break;
                             case 13:
+                                wifi_connectionRefused=true;
                                 myActivity.runOnUiThread(new Runnable() {
                                     @Override
                                     public void run() {
-                                        handleSomethingWrong("Non sono stato in grado di connettermi al dispositvo sulla Wifi");
+                                        handleSomethingWrong("Non sono stato in grado di connettermi al dispositivo");
                                     }
                                 });
                                 break;
@@ -333,7 +332,36 @@ public class DirectlyConnect {
                 };
                 try {
                     iService_app_to_wifi.register(iService_wifi_to_app);
-                    iService_app_to_wifi.createConnection(wifiip, port);
+                    new Thread(() -> {
+                        try {
+                            iService_app_to_wifi.createConnection(wifiip, port);
+                            while (!wifi_connectionCreated) {
+                                if(wifi_connectionRefused) return;
+                                try {
+                                    Thread.sleep(50);
+                                } catch (InterruptedException e) {
+                                    //e.printStackTrace();
+                                }
+                            }
+                            iService_app_to_wifi.connect();
+                            while (!wifi_connectionEstablished) {
+                                if(wifi_connectionRefused) return;
+                                try {
+                                    Thread.sleep(50);
+                                } catch (InterruptedException e) {
+                                    //e.printStackTrace();
+                                }
+                            }
+                            myActivity.runOnUiThread(new Runnable() {
+                                @Override
+                                public void run() {
+                                    checkStep2();
+                                }
+                            });
+                        } catch (RemoteException e) {
+                            e.printStackTrace();
+                        }
+                    }).start();
                 } catch (RemoteException e) {
                     e.printStackTrace();
                 }
@@ -345,6 +373,14 @@ public class DirectlyConnect {
         myActivity.bindService(wifiIntent, wifiServiceConnection, Context.BIND_IMPORTANT);
         myActivity.startService(wifiIntent);
     }
+    public static void disconnectWifi(){
+        try {
+            iService_app_to_wifi.disconnect();
+            wifi_connectionRefused=true;
+        } catch (RemoteException e) {
+            e.printStackTrace();
+        }
+    }
 
     public void checkStep2() {
         //Bluetooth
@@ -354,6 +390,7 @@ public class DirectlyConnect {
             filter.addAction(BluetoothDevice.ACTION_FOUND);
             filter.addAction(BluetoothAdapter.ACTION_DISCOVERY_FINISHED);
             myActivity.registerReceiver(bluetoothReceiver, filter);
+            btHandlerRegistered=true;
             BluetoothAdapter btadapter = BluetoothAdapter.getDefaultAdapter();
             Set<BluetoothDevice> bondedDevice = btadapter.getBondedDevices();
             alreadyPaired = false;
@@ -403,23 +440,27 @@ public class DirectlyConnect {
                         filter.addAction(BluetoothDevice.ACTION_FOUND);
                         filter.addAction(BluetoothAdapter.ACTION_DISCOVERY_FINISHED);
                         myActivity.registerReceiver(bluetoothReceiver, filter);
+                        btHandlerRegistered=true;
                         BluetoothAdapter.getDefaultAdapter().startDiscovery();
                     }
                 } else BluetoothAdapter.getDefaultAdapter().startDiscovery();
             } else {
                 myActivity.unregisterReceiver(bluetoothReceiver);
+                btHandlerRegistered=false;
                 //CREATE SOCKET CONNECTION
                 checkStep3();
             }
         } else {
             if(currentStep==1){
                 myActivity.registerReceiver(wifiReceiver, new IntentFilter(WifiManager.SCAN_RESULTS_AVAILABLE_ACTION));
+                wifiHandlerRegistered=true;
                 wifiManager.startScan();
             } else {
                 IntentFilter filter = new IntentFilter();
                 filter.addAction(BluetoothDevice.ACTION_FOUND);
                 filter.addAction(BluetoothAdapter.ACTION_DISCOVERY_FINISHED);
                 myActivity.registerReceiver(bluetoothReceiver, filter);
+                btHandlerRegistered=true;
                 BluetoothAdapter.getDefaultAdapter().startDiscovery();
             }
         }
@@ -434,12 +475,11 @@ public class DirectlyConnect {
             @Override
             public void onClick(View view) {
                 if(currentStep==1){
-                    //TODO: Handle this to not unregister if no passing through wifiscan
-                    myActivity.unregisterReceiver(wifiReceiver);
+                    if(wifiHandlerRegistered) myActivity.unregisterReceiver(wifiReceiver);
                     if(avoidConnection()) return;
                     checkStep2();
                 } else {
-                    myActivity.unregisterReceiver(bluetoothReceiver);
+                    if(btHandlerRegistered) myActivity.unregisterReceiver(bluetoothReceiver);
                     if(avoidConnection()) return;
                     checkStep3();
                 }
@@ -501,7 +541,7 @@ public class DirectlyConnect {
                                             alertdialog.dismiss();
                                             fm.beginTransaction()
                                                     .setCustomAnimations(R.anim.enter_from_right, R.anim.exit_to_left, R.anim.enter_from_left, R.anim.exit_to_right)
-                                                    .replace(R.id.send_container, new Send_step_2(), "")
+                                                    .replace(R.id.send_container, new Send_step_2(), "Send_step_2")
                                                     .addToBackStack(null)
                                                     .commit();
                                         }
@@ -512,7 +552,7 @@ public class DirectlyConnect {
                             alertdialog.dismiss();
                             fm.beginTransaction()
                                     .setCustomAnimations(R.anim.enter_from_right, R.anim.exit_to_left, R.anim.enter_from_left, R.anim.exit_to_right)
-                                    .replace(R.id.send_container, new Send_step_2(), "")
+                                    .replace(R.id.send_container, new Send_step_2(), "Send_step_2")
                                     .addToBackStack(null)
                                     .commit();
                         }
@@ -525,7 +565,7 @@ public class DirectlyConnect {
             alertdialog.dismiss();
             fm.beginTransaction()
                     .setCustomAnimations(R.anim.enter_from_right, R.anim.exit_to_left, R.anim.enter_from_left, R.anim.exit_to_right)
-                    .replace(R.id.send_container, new Send_step_2(), "")
+                    .replace(R.id.send_container, new Send_step_2(), "Send_step_2")
                     .addToBackStack(null)
                     .commit();
         }

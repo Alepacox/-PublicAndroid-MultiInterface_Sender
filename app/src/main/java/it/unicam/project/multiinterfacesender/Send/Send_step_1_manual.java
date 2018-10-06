@@ -81,6 +81,7 @@ public class Send_step_1_manual extends Fragment {
 
     public interface DataCommunication {
         public boolean isTheFirstTimeManual();
+        public void setUsedInterfaces(boolean usingWifi, boolean usingMobile, boolean usingBluetooth);
     }
 
     // TODO: Rename and change types of parameters
@@ -301,6 +302,7 @@ public class Send_step_1_manual extends Fragment {
                         if(errorInField){
                             return;
                         } else{
+                            mListener.setUsedInterfaces(usingWifi, false, usingBluetooth);
                             dc = new DirectlyConnect(currentFragment, btname, wifiip, wifiSSID, false);
                             dc.startDirectylyConnection();
                         }

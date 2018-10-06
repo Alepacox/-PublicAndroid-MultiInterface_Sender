@@ -47,7 +47,7 @@ public class Send_step_1_auto extends Fragment {
     public interface DataCommunication {
         public String getUToken();
         public String getDToken();
-        public void setWifiServiceIntent(Intent intent);
+        public void setUsedInterfaces(boolean usingWifi, boolean usingMobile, boolean usingBluetooth);
     }
 
     public DataCommunication mListener;
@@ -143,18 +143,23 @@ public class Send_step_1_auto extends Fragment {
                             if (output != null) {
                                 JSONObject object = (JSONObject) new JSONTokener(output).nextValue();
                                 if (!object.getString("message").equals("unauthorized")) {
+                                    boolean usingBluetooth=false;
                                     String btname=null;
                                     if(!object.getString("btname").equals("null")){
                                         btname=object.getString("btname");
+                                        usingBluetooth=true;
                                     }
                                     String wifiip= null;
                                     String wifiSSID=null;
+                                    boolean usingWifi=false;
                                     if(!object.getString("wifiip").equals("null")){
                                         JSONArray jsonArray = object.getJSONArray("wifiip");
                                         wifiip= jsonArray.getString(0);
                                         wifiSSID= jsonArray.getString(1);
+                                        usingWifi=true;
                                     }
                                     final boolean mobileip = object.getBoolean("mobileip");
+                                    mListener.setUsedInterfaces(usingWifi, mobileip, usingBluetooth);
                                     String finalWifiip = wifiip;
                                     String finalWifiSSID = wifiSSID;
                                     String finalbtname= btname;

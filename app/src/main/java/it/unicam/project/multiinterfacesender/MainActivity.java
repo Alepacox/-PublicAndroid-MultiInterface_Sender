@@ -1,13 +1,9 @@
 package it.unicam.project.multiinterfacesender;
 
-import android.annotation.SuppressLint;
 import android.app.Activity;
-import android.content.Context;
 import android.content.Intent;
-import android.net.Uri;
 import android.os.Build;
 import android.os.Handler;
-import android.os.Message;
 import android.support.annotation.RequiresApi;
 import android.support.design.widget.AppBarLayout;
 import android.support.design.widget.TabLayout;
@@ -19,17 +15,10 @@ import android.support.v7.widget.Toolbar;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentManager;
 import android.support.v4.app.FragmentPagerAdapter;
-import android.support.v4.view.ViewPager;
 import android.os.Bundle;
-import android.util.AttributeSet;
-import android.util.Log;
-import android.view.KeyEvent;
-import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
-import android.view.MotionEvent;
 import android.view.View;
-import android.view.ViewGroup;
 import android.widget.Toast;
 
 import it.unicam.project.multiinterfacesender.Receive.Receive;
@@ -67,6 +56,9 @@ public class MainActivity extends AppCompatActivity implements Receive.DataCommu
     private String dToken;
     //Sender variables
     private boolean firstTimeManual=true;
+    private boolean usingWifi;
+    private boolean usingMobile;
+    private boolean usingBluetooth;
     //Receiver variables
     private String wifiIp;
     private String wifiSSID;
@@ -147,16 +139,18 @@ public class MainActivity extends AppCompatActivity implements Receive.DataCommu
     }
 
     @Override
-    public void setWifiServiceIntent(Intent intent) {
-        this.wifiServiceIntent=intent;
-    }
-
-    @Override
     public boolean isTheFirstTimeManual() {
         if(firstTimeManual){
             firstTimeManual=false;
             return true;
         } else return false;
+    }
+
+    @Override
+    public void setUsedInterfaces(boolean usingWifi, boolean usingMobile, boolean usingBluetooth) {
+        this.usingWifi=usingWifi;
+        this.usingMobile=usingMobile;
+        this.usingBluetooth=usingBluetooth;
     }
 
     @Override
@@ -293,5 +287,38 @@ public class MainActivity extends AppCompatActivity implements Receive.DataCommu
         Toast.makeText(this, "Logout avvenuto con successo", Toast.LENGTH_LONG).show();
         startActivity(i);
         finish();
+    }
+
+
+    boolean doubleBackToExitPressedOnce = false;
+    @Override
+    public void onBackPressed() {
+        Fragment test = (Fragment) getSupportFragmentManager().findFragmentByTag("Send_step_2");
+        if (test != null && test.isVisible()) {
+            if (doubleBackToExitPressedOnce) {
+                if(usingWifi){
+                    DirectlyConnect.disconnectWifi();
+                    stopService(wifiServiceIntent);
+                }
+                Toast.makeText(getApplicationContext(), "Connessione terminata", Toast.LENGTH_SHORT).show();
+                super.onBackPressed();
+                return;
+            }
+
+            this.doubleBackToExitPressedOnce = true;
+            MainActivity.snackBarNav(this, R.id.send_container,
+                    "Premi ancora indietro per chiudere la connessione", Snackbar.LENGTH_SHORT, 0);
+
+            new Handler().postDelayed(new Runnable() {
+
+                @Override
+                public void run() {
+                    doubleBackToExitPressedOnce=false;
+                }
+            }, 2000);
+        }
+        else {
+            super.onBackPressed();
+        }
     }
 }

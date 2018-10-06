@@ -1,6 +1,7 @@
 package it.unicam.project.multiinterfacesender.Service;
 
 
+import android.app.Activity;
 import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
@@ -10,6 +11,7 @@ import android.net.NetworkCapabilities;
 import android.net.NetworkRequest;
 import android.os.Handler;
 import android.os.IBinder;
+import android.os.Looper;
 import android.os.RemoteException;
 import android.support.annotation.Nullable;
 import android.util.Log;
@@ -47,8 +49,8 @@ public class Wifi extends Service {
     public IBinder onBind(Intent intent) {
         return new IService_App_to_Wifi.Stub() {
             @Override
-            public void register(IService_Wifi_to_App activity) {
-                Wifi.this.iService_wifi_to_app = activity;
+            public void register(IService_Wifi_to_App service) {
+                Wifi.this.iService_wifi_to_app = service;
             }
 
             @Override
@@ -100,15 +102,11 @@ public class Wifi extends Service {
                             }
                         }
                     }
-                        final Handler handler = new Handler(Wifi.this.getMainLooper());
-                        handler.post(() -> {
-                            try {
-                                Log.e("I'm here", "inside wifi, sending handler");
-                                Wifi.this.iService_wifi_to_app.wifiHandler(WIFI_STATE_ESTABILISHED);
-                            } catch (RemoteException e) {
-                                e.printStackTrace();
-                            }
-                        });
+                    try {
+                        Wifi.this.iService_wifi_to_app.wifiHandler(WIFI_STATE_ESTABILISHED);
+                    } catch (RemoteException e) {
+                        e.printStackTrace();
+                    }
                     while (keepAlive) {
                         try {
                             Thread.sleep(30000);
