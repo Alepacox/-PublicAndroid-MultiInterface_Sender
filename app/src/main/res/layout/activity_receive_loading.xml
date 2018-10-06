@@ -8,6 +8,22 @@
     android:background="@color/receivePrimaryColor"
     tools:context=".Receive.Receive_loading">
 
+    <TextView
+        android:id="@+id/downloading_mobile_text"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginEnd="8dp"
+        android:layout_marginStart="8dp"
+        android:layout_marginTop="28dp"
+        android:text="Rete Mobile"
+        android:textColor="@android:color/white"
+        android:textSize="18sp"
+        android:textStyle="bold"
+        android:visibility="invisible"
+        wheel:layout_constraintEnd_toEndOf="parent"
+        wheel:layout_constraintStart_toStartOf="parent"
+        wheel:layout_constraintTop_toBottomOf="@+id/downloading_bluetooth" />
+
     <ProgressBar
         android:id="@+id/progressBar_receive_loading"
         style="?android:attr/progressBarStyle"
@@ -65,7 +81,7 @@
         android:textColor="@android:color/white"
         android:textSize="18sp"
         android:textStyle="bold"
-        android:visibility="visible"
+        android:visibility="invisible"
         wheel:layout_constraintEnd_toStartOf="@+id/downloading_ip_local_text"
         wheel:layout_constraintStart_toStartOf="parent"
         wheel:layout_constraintTop_toTopOf="parent" />
@@ -81,7 +97,7 @@
         android:textColor="@android:color/white"
         android:textSize="18sp"
         android:textStyle="bold"
-        android:visibility="visible"
+        android:visibility="invisible"
         wheel:layout_constraintEnd_toEndOf="parent"
         wheel:layout_constraintStart_toEndOf="@+id/downloading_bluetooth_text"
         wheel:layout_constraintTop_toTopOf="parent" />
@@ -98,7 +114,7 @@
         android:textColor="@color/colorAccent"
         android:textSize="16sp"
         android:textStyle="bold|italic"
-        android:visibility="visible"
+        android:visibility="invisible"
         wheel:layout_constraintEnd_toEndOf="@+id/downloading_bluetooth_text"
         wheel:layout_constraintStart_toStartOf="@+id/downloading_bluetooth_text"
         wheel:layout_constraintTop_toBottomOf="@+id/downloading_bluetooth_text" />
@@ -114,10 +130,26 @@
         android:textColor="@color/colorAccent"
         android:textSize="16sp"
         android:textStyle="bold|italic"
-        android:visibility="visible"
+        android:visibility="invisible"
         wheel:layout_constraintEnd_toEndOf="@+id/downloading_ip_local_text"
         wheel:layout_constraintStart_toStartOf="@+id/downloading_ip_local_text"
         wheel:layout_constraintTop_toBottomOf="@+id/downloading_ip_local_text" />
+
+    <TextView
+        android:id="@+id/downloading_remote_status"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginEnd="8dp"
+        android:layout_marginStart="8dp"
+        android:text="@string/off"
+        android:textAllCaps="false"
+        android:textColor="@color/colorAccent"
+        android:textSize="16sp"
+        android:textStyle="bold|italic"
+        android:visibility="invisible"
+        wheel:layout_constraintEnd_toEndOf="@+id/downloading_mobile_text"
+        wheel:layout_constraintStart_toStartOf="@+id/downloading_mobile_text"
+        wheel:layout_constraintTop_toBottomOf="@+id/downloading_mobile_text" />
 
     <TextView
         android:id="@+id/downloading_filename_text"

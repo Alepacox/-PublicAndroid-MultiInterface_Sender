@@ -29,7 +29,6 @@ import android.support.design.widget.Snackbar;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentManager;
 import android.support.v4.content.ContextCompat;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.ProgressBar;
@@ -42,11 +41,11 @@ import java.util.List;
 import java.util.Set;
 
 import it.unicam.project.multiinterfacesender.Send.Send_step_2;
-import it.unicam.project.multiinterfacesender.Service.Bluetooth;
-import it.unicam.project.multiinterfacesender.Service.Mobile;
-import it.unicam.project.multiinterfacesender.Service.Wifi;
+import it.unicam.project.multiinterfacesender.Service.BluetoothSend;
+import it.unicam.project.multiinterfacesender.Service.MobileSend;
+import it.unicam.project.multiinterfacesender.Service.WifiSend;
 
-import static it.unicam.project.multiinterfacesender.Service.Bluetooth.*;
+import static it.unicam.project.multiinterfacesender.Service.BluetoothSend.*;
 
 public class DirectlyConnect {
     private Activity myActivity;
@@ -62,7 +61,7 @@ public class DirectlyConnect {
     private FragmentManager fm;
     private AlertDialog alertdialog;
     //Connection
-    private Bluetooth bluetoothService;
+    private BluetoothSend bluetoothSendService;
     private WifiManager wifiManager;
     private boolean foundBTdevice;
     private int currentStep;
@@ -76,6 +75,8 @@ public class DirectlyConnect {
     //AIDL stuff
     public static ServiceConnection wifiServiceConnection;
     public static ServiceConnection mobileServiceConnection;
+    public static int wifiProcessID;
+    public static int mobileProcessID;
     private static IService_App_to_Wifi iService_app_to_wifi;
     private IService_Wifi_to_App iService_wifi_to_app;
     private static IService_App_to_Mobile iService_app_to_mobile;
@@ -94,14 +95,14 @@ public class DirectlyConnect {
             switch (msg.what) {
                 case BT_MESSAGE_STATE_CHANGE:
                     switch (msg.arg1) {
-                        case Bluetooth.BT_STATE_CONNECTED:
+                        case BluetoothSend.BT_STATE_CONNECTED:
                             btHandlerRegistered=false;
                             checkStep3();
                             break;
-                        case Bluetooth.BT_STATE_NOT_FOUND:
+                        case BluetoothSend.BT_STATE_NOT_FOUND:
                             handleSomethingWrong("Disposito bluetooth non raggiungibile");
                             break;
-                        case Bluetooth.BT_STATE_LOST_CONNECTION:
+                        case BluetoothSend.BT_STATE_LOST_CONNECTION:
                             myActivity.unregisterReceiver(bluetoothReceiver);
                             skippedInterface+=1;
                             if(skippedInterface==3){
@@ -209,7 +210,7 @@ public class DirectlyConnect {
             if (device.getBondState() == BluetoothDevice.BOND_BONDED) {
                 myActivity.unregisterReceiver(this);
                 btHandlerRegistered=false;
-                bluetoothService.connect(device);
+                bluetoothSendService.connect(device);
             } else if (device.getBondState() == BluetoothDevice.BOND_BONDING) {
                 stepmessage.setText("Accoppiamento in corso");
             }
@@ -228,7 +229,7 @@ public class DirectlyConnect {
         this.mobileconnection = mobileconnection;
         this.fm = currentFragment.getActivity().getSupportFragmentManager();
         this.currentFragment= currentFragment;
-        this.bluetoothService=new Bluetooth(mHandler);
+        this.bluetoothSendService =new BluetoothSend(mHandler);
     }
 
     public void startDirectylyConnection() {
@@ -258,7 +259,7 @@ public class DirectlyConnect {
     }
 
     public void checkStep1() {
-        //Wifi
+        //WifiSend
         if (wifiSSID != null) {
             currentStep=1;
             progress.setVisibility(View.VISIBLE);
@@ -318,7 +319,7 @@ public class DirectlyConnect {
 
     public void connectToDeviceOnWifi(){
         stepmessage.setText("Sto cercando di trovare il dispositivo sulla wifi");
-        Intent wifiIntent= new Intent(myActivity, Wifi.class);
+        Intent wifiIntent= new Intent(myActivity, WifiSend.class);
         MainActivity.wifiServiceIntent=wifiIntent;
         wifiServiceConnection= new ServiceConnection() {
             @Override
@@ -358,6 +359,11 @@ public class DirectlyConnect {
                                 }
                             });
                         }
+                    }
+
+                    @Override
+                    public void getProcessID(int code) throws RemoteException {
+                        wifiProcessID=code;
                     }
                 };
                 try {
@@ -412,7 +418,7 @@ public class DirectlyConnect {
     }
 
     public void checkStep2() {
-        //Bluetooth
+        //BluetoothSend
         if (btname != null) {
             currentStep=2;
             IntentFilter filter = new IntentFilter();
@@ -450,7 +456,7 @@ public class DirectlyConnect {
                 new Handler().postDelayed(new Runnable() {
                         @Override
                         public void run() {
-                            bluetoothService.connect(finalPairedDevice);
+                            bluetoothSendService.connect(finalPairedDevice);
                         }
                     }, 1500);
                 }
@@ -526,7 +532,7 @@ public class DirectlyConnect {
     }
 
     public void checkStep3() {
-        //Mobile
+        //MobileSend
         if (mobileconnection) {
             currentStep=3;
             progress.setVisibility(View.VISIBLE);
@@ -596,7 +602,7 @@ public class DirectlyConnect {
     }
     public void connectToServerOnMobile(){
         stepmessage.setText("Sto cercando di connettermi al server attraverso la rete mobile");
-        Intent mobileIntent= new Intent(myActivity, Mobile.class);
+        Intent mobileIntent= new Intent(myActivity, MobileSend.class);
         MainActivity.mobileServiceIntent=mobileIntent;
         mobileServiceConnection= new ServiceConnection() {
             @Override
@@ -637,6 +643,11 @@ public class DirectlyConnect {
                                 });
                                 break;
                         }
+                    }
+
+                    @Override
+                    public void getProcessID(int code) throws RemoteException {
+                        mobileProcessID=code;
                     }
                 };
                 try {

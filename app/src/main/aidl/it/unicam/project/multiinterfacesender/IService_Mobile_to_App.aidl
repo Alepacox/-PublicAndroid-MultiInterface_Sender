@@ -5,4 +5,5 @@ package it.unicam.project.multiinterfacesender;
 
 interface IService_Mobile_to_App {
     void mobileHandler(int code);
+    void getProcessID(int code);
 }

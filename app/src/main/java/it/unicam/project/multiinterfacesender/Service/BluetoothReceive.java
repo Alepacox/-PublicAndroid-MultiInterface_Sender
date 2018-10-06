@@ -2,10 +2,12 @@ package it.unicam.project.multiinterfacesender.Service;
 
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
+import android.bluetooth.BluetoothServerSocket;
 import android.bluetooth.BluetoothSocket;
 import android.os.Handler;
-import android.util.Log;
 
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.ObjectInputStream;
@@ -13,7 +15,7 @@ import java.io.ObjectOutputStream;
 import java.io.OutputStream;
 import java.util.UUID;
 
-public class Bluetooth {
+public class BluetoothReceive {
     private static final UUID MY_UUID = UUID.fromString("04c6093b-0000-1000-8000-00805f9b34fb");
 
     // Member fields
@@ -35,20 +37,53 @@ public class Bluetooth {
     // Constants that indicate command to computer
     private static final int EXIT_CMD = -1;
 
-    public Bluetooth(Handler handler) {
+    public BluetoothReceive (Handler handler) {
         this.mHandler= handler;
         mAdapter = BluetoothAdapter.getDefaultAdapter();
     }
 
-    public synchronized void connect(BluetoothDevice device) {
-        clear();
-        // Start the thread to connect with the given device
-        mConnectThread = new ConnectThread(device);
-        mConnectThread.start();
+    private class AcceptThread extends Thread {
+        private BluetoothServerSocket mmServerSocket;
+        private BluetoothSocket socket;
+
+        public AcceptThread() {
+            try {
+                // MY_UUID is the app's UUID string, also used by the client code
+                mmServerSocket = mAdapter.listenUsingRfcommWithServiceRecord("MultiInterfaceSender", MY_UUID);
+                socket= mmServerSocket.accept();
+            } catch (IOException e) { }
+        }
+
+        public void run() {
+            try {
+                cancel();
+
+                InputStream tmpIn = null;
+                OutputStream tmpOut = null;
+
+
+                tmpIn = socket.getInputStream();
+                tmpOut = socket.getOutputStream();
+
+                DataInputStream mmInStream = new DataInputStream(tmpIn);
+                DataOutputStream mmOutStream = new DataOutputStream(tmpOut);
+
+            } catch (Exception e) {
+                //catch your exception here
+            }
+
+        }
+
+        /** Will cancel the listening socket, and cause the thread to finish */
+        public void cancel() {
+            try {
+                mmServerSocket.close();
+            } catch (IOException e) { }
+        }
     }
 
     /**
-     * Start the ConnectedThread to begin managing a Bluetooth connection
+     * Start the ConnectedThread to begin managing a BluetoothSend connection
      *
      * @param socket The BluetoothSocket on which the connection was made
      * @param device The BluetoothDevice that has been connected
@@ -184,7 +219,7 @@ public class Bluetooth {
             }
 
             // Reset the ConnectThread because we're done
-            synchronized (Bluetooth.this) {
+            synchronized (BluetoothReceive.this) {
                 mConnectThread = null;
             }
 

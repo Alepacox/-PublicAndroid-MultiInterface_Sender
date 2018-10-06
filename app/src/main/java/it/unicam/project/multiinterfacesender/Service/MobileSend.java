@@ -1,7 +1,6 @@
 package it.unicam.project.multiinterfacesender.Service;
 
 
-import android.app.Activity;
 import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
@@ -11,10 +10,8 @@ import android.net.NetworkCapabilities;
 import android.net.NetworkRequest;
 import android.os.Handler;
 import android.os.IBinder;
-import android.os.Looper;
 import android.os.RemoteException;
 import android.support.annotation.Nullable;
-import android.util.Log;
 
 import java.io.IOException;
 import java.io.ObjectInputStream;
@@ -23,12 +20,13 @@ import java.net.InetAddress;
 import java.net.Socket;
 import java.net.UnknownHostException;
 
-import it.unicam.project.multiinterfacesender.IService_App_to_Wifi;
-import it.unicam.project.multiinterfacesender.IService_Wifi_to_App;
+import it.unicam.project.multiinterfacesender.DirectlyConnect;
+import it.unicam.project.multiinterfacesender.IService_App_to_Mobile;
+import it.unicam.project.multiinterfacesender.IService_Mobile_to_App;
 
-public class Wifi extends Service {
+public class MobileSend extends Service {
 
-    protected IService_Wifi_to_App iService_wifi_to_app;
+    protected IService_Mobile_to_App iService_mobile_to_app;
 
     private ConnectivityManager connectivityManager;
     private InetAddress serverAddr;
@@ -40,18 +38,20 @@ public class Wifi extends Service {
     private ObjectInputStream objectInputStream;
     private ObjectOutputStream objectOutputStream;
     private byte[] toSend;
-    public final int WIFI_STATE_CONNECTED = 11;
-    public final int WIFI_STATE_ESTABILISHED = 12;
-    public final int WIFI_STATE_NOT_FOUND = 13;
-    public final int WIFI_STATE_CLOSED=14;
+    //Aidl stuff
+    public final int MOBILE_STATE_CONNECTED = 11;
+    public final int MOBILE_STATE_ESTABILISHED = 12;
+    public final int MOBILE_STATE_NOT_FOUND = 13;
+    public final int MOBILE_STATE_CLOSED = 14;
 
     @Nullable
     @Override
     public IBinder onBind(Intent intent) {
-        return new IService_App_to_Wifi.Stub() {
+        return new IService_App_to_Mobile.Stub() {
             @Override
-            public void register(IService_Wifi_to_App service) {
-                Wifi.this.iService_wifi_to_app = service;
+            public void register(IService_Mobile_to_App activity) throws RemoteException {
+                MobileSend.this.iService_mobile_to_app = activity;
+                MobileSend.this.iService_mobile_to_app.getProcessID(android.os.Process.myPid());
             }
 
             @Override
@@ -65,12 +65,11 @@ public class Wifi extends Service {
 
                 builder = new NetworkRequest.Builder();
                 builder.addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET);
-                builder.addTransportType(NetworkCapabilities.TRANSPORT_WIFI);
+                builder.addTransportType(NetworkCapabilities.TRANSPORT_CELLULAR);
                 connectivityManager.requestNetwork(builder.build(), new ConnectivityManager.NetworkCallback() {
                     @Override
                     public void onAvailable(Network network) {
                         ConnectivityManager.setProcessDefaultNetwork(network);
-
                             try {
                                 socket = new Socket(serverAddr, PORT);
                                 connectionCreated();
@@ -90,7 +89,6 @@ public class Wifi extends Service {
                             try {
                                 objectOutputStream = new ObjectOutputStream(socket.getOutputStream());
                             } catch (Exception ignored) {
-
                             }
                         }
                         if (objectInputStream == null && socket != null) {
@@ -100,7 +98,9 @@ public class Wifi extends Service {
                             }
                         }
                     }
+
                     connectionEstablished();
+
                     while (keepAlive) {
                         try {
                             if(objectInputStream.read()==-1){
@@ -125,8 +125,10 @@ public class Wifi extends Service {
             public void disconnect() {
                 keepAlive = false;
                 try {
-                    socket.close();
-                    android.os.Process.killProcess(android.os.Process.myPid());
+                    if(socket!=null){
+                        socket.close();
+                    }
+                    stopSelf();
                 } catch (IOException e) {
                     //e.printStackTrace();
                 }
@@ -170,10 +172,10 @@ public class Wifi extends Service {
     }
 
     private void connectionCreated() {
-        final Handler handler = new Handler(Wifi.this.getMainLooper());
+        final Handler handler = new Handler(MobileSend.this.getMainLooper());
         handler.post(() -> {
             try {
-                Wifi.this.iService_wifi_to_app.wifiHandler(WIFI_STATE_CONNECTED);
+                MobileSend.this.iService_mobile_to_app.mobileHandler(MOBILE_STATE_CONNECTED);
             } catch (RemoteException e) {
                 e.printStackTrace();
             }
@@ -181,20 +183,21 @@ public class Wifi extends Service {
     }
 
     private void connectionEstablished() {
-        final Handler handler = new Handler(Wifi.this.getMainLooper());
+        final Handler handler = new Handler(MobileSend.this.getMainLooper());
         handler.post(() -> {
             try {
-                Wifi.this.iService_wifi_to_app.wifiHandler(WIFI_STATE_ESTABILISHED);
+                MobileSend.this.iService_mobile_to_app.mobileHandler(MOBILE_STATE_ESTABILISHED);
             } catch (RemoteException e) {
                 e.printStackTrace();
             }
         });
     }
+
     private void connectionRefused() {
-        final Handler handler = new Handler(Wifi.this.getMainLooper());
+        final Handler handler = new Handler(MobileSend.this.getMainLooper());
         handler.post(() -> {
             try {
-                Wifi.this.iService_wifi_to_app.wifiHandler(WIFI_STATE_NOT_FOUND);
+                MobileSend.this.iService_mobile_to_app.mobileHandler(MOBILE_STATE_NOT_FOUND);
             } catch (RemoteException e) {
                 e.printStackTrace();
             }
@@ -202,14 +205,13 @@ public class Wifi extends Service {
     }
 
     private void connectionClosed() {
-        final Handler handler = new Handler(Wifi.this.getMainLooper());
+        final Handler handler = new Handler(MobileSend.this.getMainLooper());
         handler.post(() -> {
             try {
-                Wifi.this.iService_wifi_to_app.wifiHandler(WIFI_STATE_CLOSED);
+                MobileSend.this.iService_mobile_to_app.mobileHandler(MOBILE_STATE_CLOSED);
             } catch (RemoteException e) {
                 e.printStackTrace();
             }
-            stopSelf();
         });
     }
 }

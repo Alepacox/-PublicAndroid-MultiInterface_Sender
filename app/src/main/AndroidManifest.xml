@@ -61,8 +61,10 @@
                 <action android:name="com.google.firebase.MESSAGING_EVENT" />
             </intent-filter>
         </service>
-        <service android:name=".Service.Mobile" android:process=":mobile_service_process" />
-        <service android:name=".Service.Wifi" android:process=":wifi_service_process" />
+        <service android:name=".Service.MobileSend" android:process=":mobile_send_service_process" />
+        <service android:name=".Service.WifiSend" android:process=":wifi_send_service_process" />
+        <service android:name=".Service.MobileReceive" android:process=":mobile_receive_service_process" />
+        <service android:name=".Service.WifiReceive" android:process=":wifi_receive_service_process" />
     </application>
 
 </manifest>

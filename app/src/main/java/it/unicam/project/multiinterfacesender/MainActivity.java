@@ -29,7 +29,7 @@ import it.unicam.project.multiinterfacesender.Send.Send_device_list;
 import it.unicam.project.multiinterfacesender.Send.Send_step_1_auto;
 import it.unicam.project.multiinterfacesender.Send.Send_step_1_manual;
 import it.unicam.project.multiinterfacesender.Send.Send_step_2;
-import it.unicam.project.multiinterfacesender.Service.Bluetooth;
+import it.unicam.project.multiinterfacesender.Service.BluetoothSend;
 
 public class MainActivity extends AppCompatActivity implements Receive.DataCommunication, Send_step_1_manual.DataCommunication,
         Send.DataCommunication, Send_step_2.DataCommunication,
@@ -298,15 +298,17 @@ public class MainActivity extends AppCompatActivity implements Receive.DataCommu
         if (test != null && test.isVisible()) {
             if (doubleBackToExitPressedOnce) {
                 if(usingWifi){
-                    unbindService(DirectlyConnect.wifiServiceConnection);
                     DirectlyConnect.disconnectWifi();
+                    unbindService(DirectlyConnect.wifiServiceConnection);
+                    android.os.Process.killProcess(DirectlyConnect.wifiProcessID);
                 }
                 if(usingMobile){
-                    unbindService(DirectlyConnect.mobileServiceConnection);
                     DirectlyConnect.disconnectMobile();
+                    unbindService(DirectlyConnect.mobileServiceConnection);
+                    android.os.Process.killProcess(DirectlyConnect.mobileProcessID);
                 }
                 if(usingBluetooth){
-                    Bluetooth.clear();
+                    BluetoothSend.clear();
                 }
                 Toast.makeText(getApplicationContext(), "Connessione terminata", Toast.LENGTH_SHORT).show();
                 super.onBackPressed();

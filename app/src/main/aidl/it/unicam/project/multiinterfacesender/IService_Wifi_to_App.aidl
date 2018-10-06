@@ -4,4 +4,5 @@ package it.unicam.project.multiinterfacesender;
 
 interface IService_Wifi_to_App {
     void wifiHandler(int code);
+    void getProcessID(int code);
 }

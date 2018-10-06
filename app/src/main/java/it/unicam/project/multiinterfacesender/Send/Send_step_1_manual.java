@@ -138,8 +138,8 @@ public class Send_step_1_manual extends Fragment {
             AlertDialog.Builder alertDialog = new AlertDialog.Builder(getActivity());
             alertDialog.setTitle("Modalità manuale");
             String message="Sincronizza le interfacce da utilizzare " +
-                    "con quelle del ricevente ed inserisci i parametri visibili" +
-                    "sul suo schermo una volta in ascolto.";
+                    "con quelle del ricevente ed inserisci i parametri visibili " +
+                    "sul suo schermo una volta in modalità ricezione.";
             if(mListener.getNoLoginMode()){
                 message+= "\nSenza login, l'utilizzo della rete mobile è disabilitato.";
             }
