@@ -60,8 +60,10 @@ public class Send_step_1_manual extends Fragment {
     private DataCommunication mListener;
     private CheckBox bluetoothSwitch;
     private CheckBox wifiSwitch;
+    private CheckBox mobileSwitch;
     private boolean usingWifi;
     private boolean usingBluetooth;
+    private boolean usingMobile;
     private ExpandableLayout interfaceExapandableLayout;
     private ExpandableLayout paramsExapandableLayout;
     private static final Pattern IP_ADDRESS
@@ -82,6 +84,7 @@ public class Send_step_1_manual extends Fragment {
     public interface DataCommunication {
         public boolean isTheFirstTimeManual();
         public void setUsedInterfaces(boolean usingWifi, boolean usingMobile, boolean usingBluetooth);
+        public boolean getNoLoginMode();
     }
 
     // TODO: Rename and change types of parameters
@@ -134,11 +137,13 @@ public class Send_step_1_manual extends Fragment {
         if (mListener.isTheFirstTimeManual()) {
             AlertDialog.Builder alertDialog = new AlertDialog.Builder(getActivity());
             alertDialog.setTitle("Modalità manuale");
-            alertDialog.setMessage("Sincronizza le interfacce da utilizzare " +
+            String message="Sincronizza le interfacce da utilizzare " +
                     "con quelle del ricevente ed inserisci i parametri visibili" +
-                    "sul suo schermo una volta in ascolto. \nL'uso della rete mobile" +
-                    " è disabilitato.");
-
+                    "sul suo schermo una volta in ascolto.";
+            if(mListener.getNoLoginMode()){
+                message+= "\nSenza login, l'utilizzo della rete mobile è disabilitato.";
+            }
+            alertDialog.setMessage(message);
             alertDialog.setIcon(R.mipmap.ic_launcher);
             alertDialog.setPositiveButton("OK",
                     new DialogInterface.OnClickListener() {
@@ -202,6 +207,39 @@ public class Send_step_1_manual extends Fragment {
                 }
             }
         });
+
+        mobileSwitch = getActivity().findViewById(R.id.checkBox_mobile_send);
+        if(!mListener.getNoLoginMode()){
+            mobileSwitch.setOnCheckedChangeListener((new CompoundButton.OnCheckedChangeListener() {
+                public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                    if (isChecked) {
+                        ConnectivityManager cm = (ConnectivityManager) getActivity().getApplicationContext().getSystemService(Context.CONNECTIVITY_SERVICE);
+                        try {
+                            boolean isDataEnabled = false;
+                            try {
+                                Class<?> c = Class.forName(cm.getClass().getName());
+                                Method m = c.getDeclaredMethod("getMobileDataEnabled");
+                                m.setAccessible(true);
+                                isDataEnabled = (Boolean) m.invoke(cm);
+                            } catch (NoSuchMethodException e) {
+                                isDataEnabled = Settings.Global.getInt(getContext().getContentResolver(), "mobile_data", 0) == 1;
+                            }
+                            if (!isDataEnabled) {
+                                Toast.makeText(getActivity(), "Attiva la rete mobile per procedere", Toast.LENGTH_LONG).show();
+                                startActivity(new Intent().setComponent(new ComponentName("com.android.settings", "com.android.settings.Settings$DataUsageSummaryActivity")));
+                                mobileSwitch.setChecked(false);
+                                usingMobile = false;
+                            } else usingMobile = true;
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }
+                    } else usingMobile = false;
+                }
+            }));
+        } else {
+            usingMobile= false;
+            mobileSwitch.setEnabled(false);
+        }
         bluetoothSwitch = getActivity().findViewById(R.id.checkBox_bluetooth_send);
         bluetoothSwitch.setOnCheckedChangeListener((new CompoundButton.OnCheckedChangeListener() {
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
@@ -234,7 +272,7 @@ public class Send_step_1_manual extends Fragment {
             @Override
             public void onClick(View v) {
                 if (!paramsExapandableLayout.isExpanded()) {
-                    if (usingWifi || usingBluetooth) {
+                    if (usingWifi || usingBluetooth || usingMobile) {
                         if (interfaceExapandableLayout.isExpanded()) {
                             interfaceExapandableLayout.collapse();
                         }
@@ -251,7 +289,7 @@ public class Send_step_1_manual extends Fragment {
         buttonConnect.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                if (usingWifi || usingBluetooth) {
+                if (usingWifi || usingBluetooth || usingMobile) {
                     if(interfaceExapandableLayout.isExpanded()) {
                         interfaceExapandableLayout.collapse();
                         updateTextInputByChoosenInterfaces();
@@ -302,8 +340,8 @@ public class Send_step_1_manual extends Fragment {
                         if(errorInField){
                             return;
                         } else{
-                            mListener.setUsedInterfaces(usingWifi, false, usingBluetooth);
-                            dc = new DirectlyConnect(currentFragment, btname, wifiip, wifiSSID, false);
+                            mListener.setUsedInterfaces(usingWifi, usingMobile, usingBluetooth);
+                            dc = new DirectlyConnect(currentFragment, btname, wifiip, wifiSSID, usingMobile);
                             dc.startDirectylyConnection();
                         }
                     }

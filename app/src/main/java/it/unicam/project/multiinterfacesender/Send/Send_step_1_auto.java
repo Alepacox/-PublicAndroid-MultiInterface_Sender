@@ -103,7 +103,6 @@ public class Send_step_1_auto extends Fragment {
                 getActivity().getSupportFragmentManager().beginTransaction()
                         .setCustomAnimations(R.anim.enter_from_right, R.anim.exit_to_left, R.anim.enter_from_left, R.anim.exit_to_right)
                         .replace(R.id.send_container, new Send_step_1_manual(), "")
-                        .addToBackStack(null)
                         .commit();
             }
         });
@@ -114,7 +113,6 @@ public class Send_step_1_auto extends Fragment {
                 getActivity().getSupportFragmentManager().beginTransaction()
                         .setCustomAnimations(R.anim.enter_from_right, R.anim.exit_to_left, R.anim.enter_from_left, R.anim.exit_to_right)
                         .replace(R.id.send_container, new Send_device_list(), "")
-                        .addToBackStack(null)
                         .commit();
             }
         });

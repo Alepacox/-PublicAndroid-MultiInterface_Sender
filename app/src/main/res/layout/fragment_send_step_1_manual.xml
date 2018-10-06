@@ -139,6 +139,19 @@
                 app:layout_constraintStart_toStartOf="@+id/checkBox_bluetooth_send"
                 app:layout_constraintTop_toBottomOf="@+id/checkBox_bluetooth_send" />
 
+            <TextView
+                android:id="@+id/textView17"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="16dp"
+                android:text="Rete Mobile"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintEnd_toEndOf="@+id/checkBox_mobile_send"
+                app:layout_constraintStart_toStartOf="@+id/checkBox_mobile_send"
+                app:layout_constraintTop_toBottomOf="@+id/checkBox_mobile_send" />
+
             <CheckBox
                 android:id="@+id/checkBox_bluetooth_send"
                 android:layout_width="wrap_content"
@@ -159,6 +172,18 @@
                 android:layout_marginTop="16dp"
                 app:layout_constraintBottom_toTopOf="@+id/textView14"
                 app:layout_constraintEnd_toStartOf="@+id/checkBox_bluetooth_send"
+                app:layout_constraintStart_toEndOf="@+id/checkBox_mobile_send"
+                app:layout_constraintTop_toTopOf="parent" />
+
+            <CheckBox
+                android:id="@+id/checkBox_mobile_send"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="10dp"
+                android:layout_marginStart="8dp"
+                android:layout_marginTop="16dp"
+                app:layout_constraintBottom_toTopOf="@+id/textView17"
+                app:layout_constraintEnd_toStartOf="@+id/checkBox_wifi_send"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toTopOf="parent" />
 

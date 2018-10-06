@@ -43,6 +43,7 @@ public class Wifi extends Service {
     public final int WIFI_STATE_CONNECTED = 11;
     public final int WIFI_STATE_ESTABILISHED = 12;
     public final int WIFI_STATE_NOT_FOUND = 13;
+    public final int WIFI_STATE_CLOSED=14;
 
     @Nullable
     @Override
@@ -69,16 +70,13 @@ public class Wifi extends Service {
                     @Override
                     public void onAvailable(Network network) {
                         ConnectivityManager.setProcessDefaultNetwork(network);
-                        try {
+
                             try {
                                 socket = new Socket(serverAddr, PORT);
-                                Wifi.this.iService_wifi_to_app.wifiHandler(WIFI_STATE_CONNECTED);
+                                connectionCreated();
                             } catch (IOException ignored) {
-                                Wifi.this.iService_wifi_to_app.wifiHandler(WIFI_STATE_NOT_FOUND);
+                                connectionRefused();
                             }
-                        } catch (RemoteException e) {
-                            e.printStackTrace();
-                        }
                     }
                 });
             }
@@ -102,14 +100,21 @@ public class Wifi extends Service {
                             }
                         }
                     }
-                    try {
-                        Wifi.this.iService_wifi_to_app.wifiHandler(WIFI_STATE_ESTABILISHED);
-                    } catch (RemoteException e) {
-                        e.printStackTrace();
-                    }
+                    connectionEstablished();
                     while (keepAlive) {
                         try {
-                            Thread.sleep(30000);
+                            if(objectInputStream.read()==-1){
+                                connectionClosed();
+                                disconnect();
+                                keepAlive=false;
+                            }
+                        } catch (IOException e) {
+                            connectionClosed();
+                            disconnect();
+                            keepAlive=false;
+                        }
+                        try {
+                            Thread.sleep(3000);
                         } catch (InterruptedException ignored) {
                         }
                     }
@@ -121,6 +126,7 @@ public class Wifi extends Service {
                 keepAlive = false;
                 try {
                     socket.close();
+                    android.os.Process.killProcess(android.os.Process.myPid());
                 } catch (IOException e) {
                     //e.printStackTrace();
                 }
@@ -162,12 +168,12 @@ public class Wifi extends Service {
             }
         };
     }
-/*
+
     private void connectionCreated() {
         final Handler handler = new Handler(Wifi.this.getMainLooper());
         handler.post(() -> {
             try {
-                Wifi.this.iService_wifi_to_app.connection_Created();
+                Wifi.this.iService_wifi_to_app.wifiHandler(WIFI_STATE_CONNECTED);
             } catch (RemoteException e) {
                 e.printStackTrace();
             }
@@ -178,7 +184,17 @@ public class Wifi extends Service {
         final Handler handler = new Handler(Wifi.this.getMainLooper());
         handler.post(() -> {
             try {
-                Wifi.this.iService_wifi_to_app.connection_Established();
+                Wifi.this.iService_wifi_to_app.wifiHandler(WIFI_STATE_ESTABILISHED);
+            } catch (RemoteException e) {
+                e.printStackTrace();
+            }
+        });
+    }
+    private void connectionRefused() {
+        final Handler handler = new Handler(Wifi.this.getMainLooper());
+        handler.post(() -> {
+            try {
+                Wifi.this.iService_wifi_to_app.wifiHandler(WIFI_STATE_NOT_FOUND);
             } catch (RemoteException e) {
                 e.printStackTrace();
             }
@@ -189,12 +205,11 @@ public class Wifi extends Service {
         final Handler handler = new Handler(Wifi.this.getMainLooper());
         handler.post(() -> {
             try {
-                Wifi.this.iService_wifi_to_app.connection_Closed();
+                Wifi.this.iService_wifi_to_app.wifiHandler(WIFI_STATE_CLOSED);
             } catch (RemoteException e) {
                 e.printStackTrace();
             }
             stopSelf();
         });
     }
-    */
 }

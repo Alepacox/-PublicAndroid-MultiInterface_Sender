@@ -37,6 +37,11 @@ public class Mobile extends Service {
     private ObjectInputStream objectInputStream;
     private ObjectOutputStream objectOutputStream;
     private byte[] toSend;
+    //Aidl stuff
+    public final int MOBILE_STATE_CONNECTED = 11;
+    public final int MOBILE_STATE_ESTABILISHED = 12;
+    public final int MOBILE_STATE_NOT_FOUND = 13;
+    public final int MOBILE_STATE_CLOSED = 14;
 
     @Nullable
     @Override
@@ -63,14 +68,14 @@ public class Mobile extends Service {
                     @Override
                     public void onAvailable(Network network) {
                         ConnectivityManager.setProcessDefaultNetwork(network);
-                        try {
-                            socket = new Socket(serverAddr, PORT);
-                            //network.bindSocket(socket);
-                        } catch (IOException ignored) {
-                        }
+                            try {
+                                socket = new Socket(serverAddr, PORT);
+                                connectionCreated();
+                            } catch (IOException ignored) {
+                                connectionRefused();
+                            }
                     }
                 });
-                connectionCreated();
             }
 
             @Override
@@ -96,12 +101,21 @@ public class Mobile extends Service {
 
                     while (keepAlive) {
                         try {
-                            Thread.sleep(30000);
+                            if(objectInputStream.read()==-1){
+                                connectionClosed();
+                                keepAlive=false;
+                                android.os.Process.killProcess(android.os.Process.myPid());
+                            }
+                        } catch (IOException e) {
+                            connectionClosed();
+                            keepAlive=false;
+                            android.os.Process.killProcess(android.os.Process.myPid());
+                        }
+                        try {
+                            Thread.sleep(3000);
                         } catch (InterruptedException ignored) {
                         }
                     }
-
-                    connectionClosed();
                 }).start();
             }
 
@@ -110,6 +124,7 @@ public class Mobile extends Service {
                 keepAlive = false;
                 try {
                     socket.close();
+                    android.os.Process.killProcess(android.os.Process.myPid());
                 } catch (IOException e) {
                     //e.printStackTrace();
                 }
@@ -156,7 +171,7 @@ public class Mobile extends Service {
         final Handler handler = new Handler(Mobile.this.getMainLooper());
         handler.post(() -> {
             try {
-                Mobile.this.iService_mobile_to_app.connection_Created();
+                Mobile.this.iService_mobile_to_app.mobileHandler(MOBILE_STATE_CONNECTED);
             } catch (RemoteException e) {
                 e.printStackTrace();
             }
@@ -167,10 +182,22 @@ public class Mobile extends Service {
         final Handler handler = new Handler(Mobile.this.getMainLooper());
         handler.post(() -> {
             try {
-                Mobile.this.iService_mobile_to_app.connection_Established();
+                Mobile.this.iService_mobile_to_app.mobileHandler(MOBILE_STATE_ESTABILISHED);
             } catch (RemoteException e) {
                 e.printStackTrace();
             }
+        });
+    }
+
+    private void connectionRefused() {
+        final Handler handler = new Handler(Mobile.this.getMainLooper());
+        handler.post(() -> {
+            try {
+                Mobile.this.iService_mobile_to_app.mobileHandler(MOBILE_STATE_NOT_FOUND);
+            } catch (RemoteException e) {
+                e.printStackTrace();
+            }
+            stopSelf();
         });
     }
 
@@ -178,7 +205,7 @@ public class Mobile extends Service {
         final Handler handler = new Handler(Mobile.this.getMainLooper());
         handler.post(() -> {
             try {
-                Mobile.this.iService_mobile_to_app.connection_Closed();
+                Mobile.this.iService_mobile_to_app.mobileHandler(MOBILE_STATE_CLOSED);
             } catch (RemoteException e) {
                 e.printStackTrace();
             }

@@ -43,6 +43,7 @@ import java.util.Set;
 
 import it.unicam.project.multiinterfacesender.Send.Send_step_2;
 import it.unicam.project.multiinterfacesender.Service.Bluetooth;
+import it.unicam.project.multiinterfacesender.Service.Mobile;
 import it.unicam.project.multiinterfacesender.Service.Wifi;
 
 import static it.unicam.project.multiinterfacesender.Service.Bluetooth.*;
@@ -67,16 +68,24 @@ public class DirectlyConnect {
     private int currentStep;
     private int skippedInterface;
     private boolean alreadyPaired;
-    private final int port= 50000;
+    private final String serverIp="35.180.118.235";
+    private final int mobileport=3306;
+    private final int wifiport = 50000;
     private boolean wifiHandlerRegistered=false;
     private boolean btHandlerRegistered=false;
-    //AIDL staff
+    //AIDL stuff
     public static ServiceConnection wifiServiceConnection;
+    public static ServiceConnection mobileServiceConnection;
     private static IService_App_to_Wifi iService_app_to_wifi;
     private IService_Wifi_to_App iService_wifi_to_app;
+    private static IService_App_to_Mobile iService_app_to_mobile;
+    private IService_Mobile_to_App iService_mobile_to_app;
     private volatile boolean wifi_connectionCreated=false;
     private volatile boolean wifi_connectionEstablished=false;
-    private static volatile boolean wifi_connectionRefused=false;
+    private volatile boolean wifi_connectionRefused=false;
+    private volatile boolean mobile_connectionCreated=false;
+    private volatile boolean mobile_connectionEstablished=false;
+    private volatile boolean mobile_connectionRefused=false;
 
     @SuppressLint("HandlerLeak")
     private Handler mHandler = new Handler() {
@@ -86,13 +95,21 @@ public class DirectlyConnect {
                 case BT_MESSAGE_STATE_CHANGE:
                     switch (msg.arg1) {
                         case Bluetooth.BT_STATE_CONNECTED:
-                            myActivity.unregisterReceiver(bluetoothReceiver);
                             btHandlerRegistered=false;
                             checkStep3();
                             break;
                         case Bluetooth.BT_STATE_NOT_FOUND:
                             handleSomethingWrong("Disposito bluetooth non raggiungibile");
                             break;
+                        case Bluetooth.BT_STATE_LOST_CONNECTION:
+                            myActivity.unregisterReceiver(bluetoothReceiver);
+                            skippedInterface+=1;
+                            if(skippedInterface==3){
+                                currentFragment.getActivity().getSupportFragmentManager().popBackStack();
+                                MainActivity.snackBarNav(myActivity, R.id.send_container, "Persa la con il dispositivo bluetooth. " +
+                                        "Non ci sono altre interfacce da utilizzare. Connessione annullata", Snackbar.LENGTH_LONG, 0);
+                            } else MainActivity.snackBarNav(myActivity, R.id.send_container, "Persa la con il dispositivo bluetooth. " +
+                                    "Sto utilizzando le interfacce rimanenti.", Snackbar.LENGTH_LONG, 0);
                     }
                     break;
             }
@@ -316,7 +333,6 @@ public class DirectlyConnect {
                                 break;
                             case 12:
                                 wifi_connectionEstablished=true;
-                                myActivity.unbindService(wifiServiceConnection);
                                 break;
                             case 13:
                                 wifi_connectionRefused=true;
@@ -327,6 +343,20 @@ public class DirectlyConnect {
                                     }
                                 });
                                 break;
+                            case 14:
+                            myActivity.runOnUiThread(new Runnable() {
+                                @Override
+                                public void run() {
+                                    wifi_connectionRefused=true;
+                                    skippedInterface+=1;
+                                    if(skippedInterface==3){
+                                        currentFragment.getActivity().getSupportFragmentManager().popBackStack();
+                                        MainActivity.snackBarNav(myActivity, R.id.send_container, "Persa la con il dispositivo in wifi. " +
+                                                "Non ci sono altre interfacce da utilizzare. Connessione annullata", Snackbar.LENGTH_LONG, 0);
+                                    } else MainActivity.snackBarNav(myActivity, R.id.send_container, "Persa la con il dispositivo in wifi. " +
+                                            "Sto utilizzando le interfacce rimanenti.", Snackbar.LENGTH_LONG, 0);
+                                }
+                            });
                         }
                     }
                 };
@@ -334,7 +364,7 @@ public class DirectlyConnect {
                     iService_app_to_wifi.register(iService_wifi_to_app);
                     new Thread(() -> {
                         try {
-                            iService_app_to_wifi.createConnection(wifiip, port);
+                            iService_app_to_wifi.createConnection(wifiip, wifiport);
                             while (!wifi_connectionCreated) {
                                 if(wifi_connectionRefused) return;
                                 try {
@@ -355,6 +385,7 @@ public class DirectlyConnect {
                             myActivity.runOnUiThread(new Runnable() {
                                 @Override
                                 public void run() {
+                                    if(wifi_connectionRefused) return;
                                     checkStep2();
                                 }
                             });
@@ -376,9 +407,7 @@ public class DirectlyConnect {
     public static void disconnectWifi(){
         try {
             iService_app_to_wifi.disconnect();
-            wifi_connectionRefused=true;
         } catch (RemoteException e) {
-            e.printStackTrace();
         }
     }
 
@@ -549,12 +578,7 @@ public class DirectlyConnect {
                                 }
                             }, 2000);
                         } else {
-                            alertdialog.dismiss();
-                            fm.beginTransaction()
-                                    .setCustomAnimations(R.anim.enter_from_right, R.anim.exit_to_left, R.anim.enter_from_left, R.anim.exit_to_right)
-                                    .replace(R.id.send_container, new Send_step_2(), "Send_step_2")
-                                    .addToBackStack(null)
-                                    .commit();
+                            connectToServerOnMobile();
                         }
                     } catch (Exception e) {
                         e.printStackTrace();
@@ -568,6 +592,107 @@ public class DirectlyConnect {
                     .replace(R.id.send_container, new Send_step_2(), "Send_step_2")
                     .addToBackStack(null)
                     .commit();
+        }
+    }
+    public void connectToServerOnMobile(){
+        stepmessage.setText("Sto cercando di connettermi al server attraverso la rete mobile");
+        Intent mobileIntent= new Intent(myActivity, Mobile.class);
+        MainActivity.mobileServiceIntent=mobileIntent;
+        mobileServiceConnection= new ServiceConnection() {
+            @Override
+            public void onServiceConnected(ComponentName componentName, IBinder iBinder) {
+                iService_app_to_mobile = IService_App_to_Mobile.Stub.asInterface(iBinder);
+                iService_mobile_to_app = new IService_Mobile_to_App.Stub() {
+                    @Override
+                    public void mobileHandler(int code) throws RemoteException {
+                        switch (code){
+                            case 11:
+                                mobile_connectionCreated=true;
+                                break;
+                            case 12:
+                                mobile_connectionEstablished=true;
+                                break;
+                            case 13:
+                                mobile_connectionRefused=true;
+                                myActivity.runOnUiThread(new Runnable() {
+                                    @Override
+                                    public void run() {
+                                        handleSomethingWrong("Non sono stato in grado di connettermi al dispositivo");
+                                    }
+                                });
+                                break;
+                            case 14:
+                                myActivity.runOnUiThread(new Runnable() {
+                                    @Override
+                                    public void run() {
+                                        mobile_connectionRefused=true;
+                                        skippedInterface+=1;
+                                        if(skippedInterface==3){
+                                            currentFragment.getActivity().getSupportFragmentManager().popBackStack();
+                                            MainActivity.snackBarNav(myActivity, R.id.send_container, "Persa la connessione con il server. " +
+                                                    "Non ci sono altre interfacce da utilizzare. Connessione annullata", Snackbar.LENGTH_LONG, 0);
+                                        } else MainActivity.snackBarNav(myActivity, R.id.send_container, "Persa la connessione con il server. " +
+                                                "Sto utilizzando interfacce rimanenti.", Snackbar.LENGTH_LONG, 0);
+                                    }
+                                });
+                                break;
+                        }
+                    }
+                };
+                try {
+                    iService_app_to_mobile.register(iService_mobile_to_app);
+                    new Thread(() -> {
+                        try {
+                            iService_app_to_mobile.createConnection(serverIp, mobileport);
+                            while (!mobile_connectionCreated) {
+                                if(mobile_connectionRefused) return;
+                                try {
+                                    Thread.sleep(50);
+                                } catch (InterruptedException e) {
+                                    //e.printStackTrace();
+                                }
+                            }
+                            iService_app_to_mobile.connect();
+                            while (!mobile_connectionEstablished) {
+                                if(mobile_connectionRefused) return;
+                                try {
+                                    Thread.sleep(50);
+                                } catch (InterruptedException e) {
+                                    //e.printStackTrace();
+                                }
+                            }
+                            myActivity.runOnUiThread(new Runnable() {
+                                @Override
+                                public void run() {
+                                    if(mobile_connectionRefused) return;
+                                    alertdialog.dismiss();
+                                    fm.beginTransaction()
+                                            .setCustomAnimations(R.anim.enter_from_right, R.anim.exit_to_left, R.anim.enter_from_left, R.anim.exit_to_right)
+                                            .replace(R.id.send_container, new Send_step_2(), "Send_step_2")
+                                            .addToBackStack(null)
+                                            .commit();
+                                }
+                            });
+                        } catch (RemoteException e) {
+                            e.printStackTrace();
+                        }
+                    }).start();
+                } catch (RemoteException e) {
+                    e.printStackTrace();
+                }
+            }
+            @Override
+            public void onServiceDisconnected(ComponentName componentName) {
+            }
+        };
+        myActivity.bindService(mobileIntent, mobileServiceConnection, Context.BIND_IMPORTANT);
+        myActivity.startService(mobileIntent);
+    }
+
+    public static void disconnectMobile(){
+        try {
+            iService_app_to_mobile.disconnect();
+        } catch (RemoteException e) {
         }
     }
     private boolean avoidConnection(){

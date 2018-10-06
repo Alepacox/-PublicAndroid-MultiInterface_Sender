@@ -18,8 +18,8 @@ public class Bluetooth {
 
     // Member fields
     private final BluetoothAdapter mAdapter;
-    private ConnectThread mConnectThread;
-    private ConnectedThread mConnectedThread;
+    private static ConnectThread mConnectThread;
+    private static ConnectedThread mConnectedThread;
     private OnMessageReceived mMessageListener;
     private int mState;
     private Handler mHandler;
@@ -30,6 +30,7 @@ public class Bluetooth {
     public final static int BT_MESSAGE_STATE_CHANGE=2;
     public final static int BT_STATE_CONNECTED=21;
     public final static int BT_STATE_NOT_FOUND=22;
+    public final static int BT_STATE_LOST_CONNECTION=23;
 
     // Constants that indicate command to computer
     private static final int EXIT_CMD = -1;
@@ -60,7 +61,7 @@ public class Bluetooth {
 
     }
 
-    public synchronized void clear() {
+    public static synchronized void clear() {
         if (mConnectThread != null) {
             mConnectThread.cancel();
             mConnectThread = null;
@@ -69,7 +70,6 @@ public class Bluetooth {
             mConnectedThread.cancel();
             mConnectedThread = null;
         }
-
     }
     /**
      * Write to the ConnectedThread in an unsynchronized manner
@@ -93,7 +93,9 @@ public class Bluetooth {
      * Indicate that the connection attempt failed and notify the UI Activity.
      */
     private void connectionFailed() {
+        if(mHandler!=null){
         mHandler.obtainMessage(BT_MESSAGE_STATE_CHANGE, BT_STATE_NOT_FOUND, -1).sendToTarget();
+        }
         //setState(BT_STATE_LISTEN);
 
         /*// Send a failure message back to the Activity
@@ -108,6 +110,9 @@ public class Bluetooth {
      * Indicate that the connection was lost and notify the UI Activity.
      */
     private void connectionLost() {
+        if(mHandler!=null){
+            mHandler.obtainMessage(BT_MESSAGE_STATE_CHANGE, BT_STATE_LOST_CONNECTION, -1).sendToTarget();
+        }
         /*mConnectionLostCount++;
         if (mConnectionLostCount < 3) {
         	// Send a reconnect message back to the Activity
@@ -144,7 +149,9 @@ public class Bluetooth {
             try {
                 tmp = device.createRfcommSocketToServiceRecord(MY_UUID);
             } catch (IOException e) {
-                mHandler.obtainMessage(BT_MESSAGE_STATE_CHANGE, BT_STATE_NOT_FOUND, -1).sendToTarget();
+                if(mHandler!=null){
+                    mHandler.obtainMessage(BT_MESSAGE_STATE_CHANGE, BT_STATE_NOT_FOUND, -1).sendToTarget();
+                }
             }
             mmSocket = tmp;
         }
@@ -161,7 +168,9 @@ public class Bluetooth {
                 // This is a blocking call and will only return on a
                 // successful connection or an exception
                 mmSocket.connect();
-                mHandler.obtainMessage(BT_MESSAGE_STATE_CHANGE, BT_STATE_CONNECTED, -1).sendToTarget();
+                if(mHandler!=null){
+                    mHandler.obtainMessage(BT_MESSAGE_STATE_CHANGE, BT_STATE_CONNECTED, -1).sendToTarget();
+                }
             } catch (IOException e) {
                 connectionFailed();
                 // Close the socket
@@ -185,6 +194,7 @@ public class Bluetooth {
 
         void cancel() {
             try {
+                mHandler=null;
                 mmSocket.close();
             } catch (IOException e) {
 //                Log.e(TAG, "close() of connect socket failed", e);
@@ -281,6 +291,7 @@ public class Bluetooth {
 
         void cancel() {
             try {
+                mHandler=null;
                 mmOutStream.write(EXIT_CMD);
                 mmSocket.close();
             } catch (IOException e) {
