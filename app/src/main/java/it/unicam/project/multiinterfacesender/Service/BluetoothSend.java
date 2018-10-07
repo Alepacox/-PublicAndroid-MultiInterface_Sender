@@ -4,6 +4,7 @@ import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothSocket;
 import android.os.Handler;
+import android.util.Log;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -11,6 +12,8 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.OutputStream;
 import java.util.UUID;
+
+import it.unicam.project.multiinterfacesender.Receive.SendedData;
 
 public class BluetoothSend {
     private static final UUID MY_UUID = UUID.fromString("04c6093b-0000-1000-8000-00805f9b34fb");
@@ -26,10 +29,10 @@ public class BluetoothSend {
     //private int mConnectionLostCount;
 
     // Constants that indicate the current connection state
-    public final static int BT_MESSAGE_STATE_CHANGE=2;
-    public final static int BT_STATE_CONNECTED=21;
-    public final static int BT_STATE_NOT_FOUND=22;
-    public final static int BT_STATE_LOST_CONNECTION=23;
+    public final static int BT_SEND_MESSAGE_STATE_CHANGE =2;
+    public final static int BT_SEND_STATE_CONNECTED =21;
+    public final static int BT_SEND_STATE_NOT_FOUND =22;
+    public final static int BT_SEND_STATE_LOST_CONNECTION =23;
 
     // Constants that indicate command to computer
     private static final int EXIT_CMD = -1;
@@ -46,14 +49,9 @@ public class BluetoothSend {
         mConnectThread.start();
     }
 
-    /**
-     * Start the ConnectedThread to begin managing a BluetoothSend connection
-     *
-     * @param socket The BluetoothSocket on which the connection was made
-     * @param device The BluetoothDevice that has been connected
-     */
-    private void connected(BluetoothSocket socket, BluetoothDevice device) {
-        clear();
+
+    private void connected(BluetoothSocket socket) {
+        //clear();
         // Start the thread to manage the connection and perform transmissions
         mConnectedThread = new ConnectedThread(socket);
         mConnectedThread.start();
@@ -63,10 +61,16 @@ public class BluetoothSend {
     public static synchronized void clear() {
         if (mConnectThread != null) {
             mConnectThread.cancel();
+            if(mConnectThread.isAlive()){
+                mConnectThread.interrupt();
+            }
             mConnectThread = null;
         }
         if (mConnectedThread != null) {
             mConnectedThread.cancel();
+            if(mConnectedThread.isAlive()){
+                mConnectedThread.interrupt();
+            }
             mConnectedThread = null;
         }
     }
@@ -76,12 +80,11 @@ public class BluetoothSend {
      * @param out The bytes to write
      * @see ConnectedThread#write(byte[])
      */
-    public void write(byte[] out) {
+    public void write(SendedData out) {
         // Create temporary object
         ConnectedThread r;
         // Synchronize a copy of the ConnectedThread
         synchronized (this) {
-            if (mState != BT_STATE_CONNECTED) return;
             r = mConnectedThread;
         }
         // Perform the write unsynchronized
@@ -93,7 +96,7 @@ public class BluetoothSend {
      */
     private void connectionFailed() {
         if(mHandler!=null){
-        mHandler.obtainMessage(BT_MESSAGE_STATE_CHANGE, BT_STATE_NOT_FOUND, -1).sendToTarget();
+        mHandler.obtainMessage(BT_SEND_MESSAGE_STATE_CHANGE, BT_SEND_STATE_NOT_FOUND, -1).sendToTarget();
         }
         //setState(BT_STATE_LISTEN);
 
@@ -110,7 +113,7 @@ public class BluetoothSend {
      */
     private void connectionLost() {
         if(mHandler!=null){
-            mHandler.obtainMessage(BT_MESSAGE_STATE_CHANGE, BT_STATE_LOST_CONNECTION, -1).sendToTarget();
+            mHandler.obtainMessage(BT_SEND_MESSAGE_STATE_CHANGE, BT_SEND_STATE_LOST_CONNECTION, -1).sendToTarget();
         }
         /*mConnectionLostCount++;
         if (mConnectionLostCount < 3) {
@@ -149,7 +152,7 @@ public class BluetoothSend {
                 tmp = device.createRfcommSocketToServiceRecord(MY_UUID);
             } catch (IOException e) {
                 if(mHandler!=null){
-                    mHandler.obtainMessage(BT_MESSAGE_STATE_CHANGE, BT_STATE_NOT_FOUND, -1).sendToTarget();
+                    mHandler.obtainMessage(BT_SEND_MESSAGE_STATE_CHANGE, BT_SEND_STATE_NOT_FOUND, -1).sendToTarget();
                 }
             }
             mmSocket = tmp;
@@ -167,9 +170,6 @@ public class BluetoothSend {
                 // This is a blocking call and will only return on a
                 // successful connection or an exception
                 mmSocket.connect();
-                if(mHandler!=null){
-                    mHandler.obtainMessage(BT_MESSAGE_STATE_CHANGE, BT_STATE_CONNECTED, -1).sendToTarget();
-                }
             } catch (IOException e) {
                 connectionFailed();
                 // Close the socket
@@ -188,7 +188,7 @@ public class BluetoothSend {
             }
 
             // Start the connected thread
-            connected(mmSocket, mmDevice);
+            connected(mmSocket);
         }
 
         void cancel() {
@@ -207,40 +207,37 @@ public class BluetoothSend {
      */
     private class ConnectedThread extends Thread {
         private final BluetoothSocket mmSocket;
-        private final InputStream mmInStream;
-        private final OutputStream mmOutStream;
         private ObjectInputStream objectInputStream;
         private ObjectOutputStream objectOutputStream;
 
         ConnectedThread(BluetoothSocket socket) {
             mmSocket = socket;
-            InputStream tmpIn = null;
-            OutputStream tmpOut = null;
-
-            // Get the BluetoothSocket input and output streams
-            try {
-                tmpIn = socket.getInputStream();
-                tmpOut = socket.getOutputStream();
-            } catch (IOException e) {
-//                Log.e(TAG, "temp sockets not created", e);
-            }
-
-            mmInStream = tmpIn;
-            mmOutStream = tmpOut;
-            while (objectInputStream == null) {
-                try {
-                    objectInputStream = new ObjectInputStream(mmInStream);
-                } catch (IOException e) {
-                    System.out.println(e.getMessage());
+            long t= System.currentTimeMillis();
+            long end = t+10000;
+            while (objectOutputStream == null || objectInputStream == null) {
+                if(System.currentTimeMillis() >= end) {
+                    cancel();
+                    break;
+                }
+                if (objectOutputStream == null && socket != null) {
+                    try {
+                        objectOutputStream = new ObjectOutputStream(socket.getOutputStream());
+                    } catch (Exception ignored) {
+                        ignored.printStackTrace();
+                    }
+                }
+                if (objectInputStream == null && socket != null) {
+                    Log.e("LOOP", "here");
+                    try {
+                        objectInputStream = new ObjectInputStream(socket.getInputStream());
+                    } catch (Exception ignored) {
+                        ignored.printStackTrace();
+                    }
                 }
             }
-
-            while (objectOutputStream == null) {
-                try {
-                    objectOutputStream = new ObjectOutputStream(mmOutStream);
-                } catch (IOException e) {
-                    System.out.println(e.getMessage());
-                }
+            Log.e("Out of while", "true");
+            if(mHandler!=null){
+                mHandler.obtainMessage(BT_SEND_MESSAGE_STATE_CHANGE, BT_SEND_STATE_CONNECTED, -1).sendToTarget();
             }
         }
 
@@ -262,7 +259,7 @@ public class BluetoothSend {
                     mMessageListener.messageReceived(s);
                     //objectInputStream.reset();
 
-                } catch (ClassNotFoundException | IOException e) {
+                } catch (Exception e) {
 //                    Log.e(TAG, "disconnected", e);
                     connectionLost();
                     break;
@@ -275,7 +272,7 @@ public class BluetoothSend {
          *
          * @param buffer The bytes to write
          */
-        void write(byte[] buffer) {
+        void write(SendedData buffer) {
             try {
                 objectOutputStream.writeUnshared(buffer);
                 objectOutputStream.flush();
@@ -284,14 +281,14 @@ public class BluetoothSend {
 //                mHandler.obtainMessage(BluetoothChat.MESSAGE_WRITE, -1, -1, buffer)
 //                        .sendToTarget();
             } catch (IOException e) {
-//                Log.e(TAG, "Exception during write", e);
+                return;
             }
         }
 
         void cancel() {
             try {
                 mHandler=null;
-                mmOutStream.write(EXIT_CMD);
+                objectOutputStream.write(EXIT_CMD);
                 mmSocket.close();
             } catch (IOException e) {
 //                Log.e(TAG, "close() of connect socket failed", e);

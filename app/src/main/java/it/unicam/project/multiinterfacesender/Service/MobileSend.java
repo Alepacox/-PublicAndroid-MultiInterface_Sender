@@ -13,8 +13,12 @@ import android.os.IBinder;
 import android.os.RemoteException;
 import android.support.annotation.Nullable;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.ObjectInput;
 import java.io.ObjectInputStream;
+import java.io.ObjectOutput;
 import java.io.ObjectOutputStream;
 import java.net.InetAddress;
 import java.net.Socket;
@@ -23,6 +27,7 @@ import java.net.UnknownHostException;
 import it.unicam.project.multiinterfacesender.DirectlyConnect;
 import it.unicam.project.multiinterfacesender.IService_App_to_Mobile;
 import it.unicam.project.multiinterfacesender.IService_Mobile_to_App;
+import it.unicam.project.multiinterfacesender.Receive.SendedData;
 
 public class MobileSend extends Service {
 
@@ -151,7 +156,7 @@ public class MobileSend extends Service {
                 if (objectOutputStream != null) {
                     try {
                         //objectOutputStream.writeUnshared(deSerialize(toSend));
-                        objectOutputStream.writeUnshared(toSend);
+                        objectOutputStream.writeUnshared(deSerialize(toSend));
                         toSend = null;
                     } catch (IOException e) {
                         e.printStackTrace();
@@ -213,5 +218,47 @@ public class MobileSend extends Service {
                 e.printStackTrace();
             }
         });
+    }
+
+    public byte[] serialize(SendedData in) {
+        byte[] out = null;
+        ByteArrayOutputStream bos = new ByteArrayOutputStream();
+        ObjectOutput objOut;
+        try {
+            objOut = new ObjectOutputStream(bos);
+            objOut.writeObject(in);
+            objOut.flush();
+            out = bos.toByteArray();
+        } catch (IOException e) {
+            e.printStackTrace();
+        } finally {
+            try {
+                bos.close();
+            } catch (IOException ex) {
+                // ignore close exception
+            }
+        }
+        return out;
+    }
+
+    public SendedData deSerialize(byte[] in) {
+        SendedData out = null;
+        ByteArrayInputStream bis = new ByteArrayInputStream(in);
+        ObjectInput objIn = null;
+        try {
+            objIn = new ObjectInputStream(bis);
+            out = (SendedData) objIn.readObject();
+        } catch (ClassNotFoundException | IOException e) {
+            e.printStackTrace();
+        } finally {
+            try {
+                if (objIn != null) {
+                    objIn.close();
+                }
+            } catch (IOException ex) {
+                // ignore close exception
+            }
+        }
+        return out;
     }
 }

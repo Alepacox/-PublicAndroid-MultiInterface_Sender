@@ -19,6 +19,7 @@ import android.widget.TextView;
 
 import it.unicam.project.multiinterfacesender.MainActivity;
 import it.unicam.project.multiinterfacesender.R;
+import it.unicam.project.multiinterfacesender.Streamer;
 
 public class Send_step_2 extends Fragment {
     // TODO: Rename parameter arguments, choose names that match
@@ -95,7 +96,7 @@ public class Send_step_2 extends Fragment {
                 if(choosenFileUri!=null){
                     Intent myIntent = new Intent(getActivity(), Send_loading.class);
                     myIntent.putExtra("choosenFileName", choosenFileName);
-                    //myIntent.putExtra("choosenFileUri", choosenFileUri);
+                    myIntent.putExtra("choosenFileUri", choosenFileUri);
                     getActivity().startActivity(myIntent);
                 } else {
                     MainActivity.snackBarNav(getActivity(), R.id.send_container,

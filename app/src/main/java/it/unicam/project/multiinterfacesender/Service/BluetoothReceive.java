@@ -1,19 +1,19 @@
 package it.unicam.project.multiinterfacesender.Service;
 
 import android.bluetooth.BluetoothAdapter;
-import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothServerSocket;
 import android.bluetooth.BluetoothSocket;
 import android.os.Handler;
+import android.util.Log;
 
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.OutputStream;
 import java.util.UUID;
+
+import it.unicam.project.multiinterfacesender.Receive.SendedData;
 
 public class BluetoothReceive {
     private static final UUID MY_UUID = UUID.fromString("04c6093b-0000-1000-8000-00805f9b34fb");
@@ -29,67 +29,29 @@ public class BluetoothReceive {
     //private int mConnectionLostCount;
 
     // Constants that indicate the current connection state
-    public final static int BT_MESSAGE_STATE_CHANGE=2;
-    public final static int BT_STATE_CONNECTED=21;
-    public final static int BT_STATE_NOT_FOUND=22;
-    public final static int BT_STATE_LOST_CONNECTION=23;
+    public final static int BT_RECEIVE_MESSAGE_STATE_CHANGE =3;
+    public final static int BT_RECEIVE_STATE_CONNECTED =32;
+    public final static int BT_RECEIVE_STATE_ERROR =33;
+    public final static int BT_RECEIVE_STATE_LOST_CONNECTION =34;
 
     // Constants that indicate command to computer
     private static final int EXIT_CMD = -1;
 
-    public BluetoothReceive (Handler handler) {
+    public BluetoothReceive(Handler handler, OnMessageReceived listener) {
         this.mHandler= handler;
         mAdapter = BluetoothAdapter.getDefaultAdapter();
+        mMessageListener = listener;
     }
 
-    private class AcceptThread extends Thread {
-        private BluetoothServerSocket mmServerSocket;
-        private BluetoothSocket socket;
-
-        public AcceptThread() {
-            try {
-                // MY_UUID is the app's UUID string, also used by the client code
-                mmServerSocket = mAdapter.listenUsingRfcommWithServiceRecord("MultiInterfaceSender", MY_UUID);
-                socket= mmServerSocket.accept();
-            } catch (IOException e) { }
-        }
-
-        public void run() {
-            try {
-                cancel();
-
-                InputStream tmpIn = null;
-                OutputStream tmpOut = null;
-
-
-                tmpIn = socket.getInputStream();
-                tmpOut = socket.getOutputStream();
-
-                DataInputStream mmInStream = new DataInputStream(tmpIn);
-                DataOutputStream mmOutStream = new DataOutputStream(tmpOut);
-
-            } catch (Exception e) {
-                //catch your exception here
-            }
-
-        }
-
-        /** Will cancel the listening socket, and cause the thread to finish */
-        public void cancel() {
-            try {
-                mmServerSocket.close();
-            } catch (IOException e) { }
-        }
-    }
-
-    /**
-     * Start the ConnectedThread to begin managing a BluetoothSend connection
-     *
-     * @param socket The BluetoothSocket on which the connection was made
-     * @param device The BluetoothDevice that has been connected
-     */
-    private void connected(BluetoothSocket socket, BluetoothDevice device) {
+    public synchronized void connect() {
         clear();
+        // Start the thread to connect with the given device
+        mConnectThread = new ConnectThread();
+        mConnectThread.start();
+    }
+
+    private void connected(BluetoothSocket socket) throws IOException {
+        //clear();
         // Start the thread to manage the connection and perform transmissions
         mConnectedThread = new ConnectedThread(socket);
         mConnectedThread.start();
@@ -99,10 +61,16 @@ public class BluetoothReceive {
     public static synchronized void clear() {
         if (mConnectThread != null) {
             mConnectThread.cancel();
+            if(mConnectThread.isAlive()){
+                mConnectThread.interrupt();
+            }
             mConnectThread = null;
         }
         if (mConnectedThread != null) {
             mConnectedThread.cancel();
+            if(mConnectedThread.isAlive()){
+                mConnectedThread.interrupt();
+            }
             mConnectedThread = null;
         }
     }
@@ -117,7 +85,7 @@ public class BluetoothReceive {
         ConnectedThread r;
         // Synchronize a copy of the ConnectedThread
         synchronized (this) {
-            if (mState != BT_STATE_CONNECTED) return;
+            if (mState != BT_RECEIVE_STATE_CONNECTED) return;
             r = mConnectedThread;
         }
         // Perform the write unsynchronized
@@ -125,28 +93,11 @@ public class BluetoothReceive {
     }
 
     /**
-     * Indicate that the connection attempt failed and notify the UI Activity.
-     */
-    private void connectionFailed() {
-        if(mHandler!=null){
-        mHandler.obtainMessage(BT_MESSAGE_STATE_CHANGE, BT_STATE_NOT_FOUND, -1).sendToTarget();
-        }
-        //setState(BT_STATE_LISTEN);
-
-        /*// Send a failure message back to the Activity
-        Message msg = mHandler.obtainMessage(0);//MainActivity.BT_MESSAGE_TOAST
-        Bundle bundle = new Bundle();
-        bundle.putString("toast", "Unable to connect device");
-        msg.setData(bundle);
-        mHandler.sendMessage(msg);*/
-    }
-
-    /**
      * Indicate that the connection was lost and notify the UI Activity.
      */
     private void connectionLost() {
         if(mHandler!=null){
-            mHandler.obtainMessage(BT_MESSAGE_STATE_CHANGE, BT_STATE_LOST_CONNECTION, -1).sendToTarget();
+            mHandler.obtainMessage(BT_RECEIVE_MESSAGE_STATE_CHANGE, BT_RECEIVE_STATE_LOST_CONNECTION, -1).sendToTarget();
         }
         /*mConnectionLostCount++;
         if (mConnectionLostCount < 3) {
@@ -175,62 +126,47 @@ public class BluetoothReceive {
      * succeeds or fails.
      */
     private class ConnectThread extends Thread {
-        private final BluetoothSocket mmSocket;
-        private final BluetoothDevice mmDevice;
+        private BluetoothServerSocket mmServerSocket;
+        private BluetoothSocket socket;
 
-        ConnectThread(BluetoothDevice device) {
-            mmDevice = device;
+        ConnectThread() {
             BluetoothSocket tmp = null;
             try {
-                tmp = device.createRfcommSocketToServiceRecord(MY_UUID);
+                // MY_UUID is the app's UUID string, also used by the client code
+                mmServerSocket = mAdapter.listenUsingRfcommWithServiceRecord("MultiInterfaceSender", MY_UUID);
             } catch (IOException e) {
                 if(mHandler!=null){
-                    mHandler.obtainMessage(BT_MESSAGE_STATE_CHANGE, BT_STATE_NOT_FOUND, -1).sendToTarget();
+                    mHandler.obtainMessage(BT_RECEIVE_MESSAGE_STATE_CHANGE, BT_RECEIVE_STATE_ERROR, -1).sendToTarget();
                 }
             }
-            mmSocket = tmp;
         }
 
         public void run() {
-//            Log.i(TAG, "BEGIN mConnectThread");
-            setName("ConnectThread");
-
-            // Always cancel discovery because it will slow down a connection
-            if(mAdapter.isDiscovering()) mAdapter.cancelDiscovery();
-
-            // Make a connection to the BluetoothSocket
-            try {
-                // This is a blocking call and will only return on a
-                // successful connection or an exception
-                mmSocket.connect();
-                if(mHandler!=null){
-                    mHandler.obtainMessage(BT_MESSAGE_STATE_CHANGE, BT_STATE_CONNECTED, -1).sendToTarget();
-                }
-            } catch (IOException e) {
-                connectionFailed();
-                // Close the socket
+            while (true) {
                 try {
-                    mmSocket.close();
-                } catch (IOException e2) {
-//                    Log.e(TAG, "unable to close() socket during connection failure", e2);
+                    socket = mmServerSocket.accept();
+                } catch (IOException e) {
+                    e.printStackTrace();
                 }
-                clear();
-                return;
+
+                if (socket != null) {
+                    try {
+                        connected(socket);
+                        mmServerSocket.close();
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                    Log.e("BT connection", "estabilished");
+                    break;
+                }
             }
 
-            // Reset the ConnectThread because we're done
-            synchronized (BluetoothReceive.this) {
-                mConnectThread = null;
-            }
-
-            // Start the connected thread
-            connected(mmSocket, mmDevice);
         }
 
         void cancel() {
             try {
                 mHandler=null;
-                mmSocket.close();
+                if(socket!=null)socket.close();
             } catch (IOException e) {
 //                Log.e(TAG, "close() of connect socket failed", e);
             }
@@ -243,63 +179,58 @@ public class BluetoothReceive {
      */
     private class ConnectedThread extends Thread {
         private final BluetoothSocket mmSocket;
-        private final InputStream mmInStream;
-        private final OutputStream mmOutStream;
         private ObjectInputStream objectInputStream;
         private ObjectOutputStream objectOutputStream;
+        private InputStream mmInStream;
+        private OutputStream mmOutStream;
 
-        ConnectedThread(BluetoothSocket socket) {
+        public ConnectedThread(BluetoothSocket socket) {
             mmSocket = socket;
             InputStream tmpIn = null;
             OutputStream tmpOut = null;
-
-            // Get the BluetoothSocket input and output streams
-            try {
-                tmpIn = socket.getInputStream();
-                tmpOut = socket.getOutputStream();
-            } catch (IOException e) {
-//                Log.e(TAG, "temp sockets not created", e);
-            }
-
+            Log.e("I'm here", "Inside connected thread");
+            // Get the input and output streams; using temp objects because
+            // member streams are final.
+                try {
+                    tmpIn = socket.getInputStream();
+                    tmpOut = socket.getOutputStream();
+                    Log.e("I'm here", "Inside io allocation");
+                } catch (IOException e) {
+                    e.printStackTrace();
+                    Log.e("TAG", "Error occurred when creating input stream", e);
+                }
             mmInStream = tmpIn;
             mmOutStream = tmpOut;
-            while (objectInputStream == null) {
-                try {
-                    objectInputStream = new ObjectInputStream(mmInStream);
-                } catch (IOException e) {
-                    System.out.println(e.getMessage());
-                }
-            }
-
-            while (objectOutputStream == null) {
-                try {
-                    objectOutputStream = new ObjectOutputStream(mmOutStream);
-                } catch (IOException e) {
-                    System.out.println(e.getMessage());
-                }
+            if(mHandler!=null){
+                mHandler.obtainMessage(BT_RECEIVE_MESSAGE_STATE_CHANGE, BT_RECEIVE_STATE_CONNECTED, -1).sendToTarget();
             }
         }
 
         public void run() {
 //            Log.i(TAG, "BEGIN mConnectedThread");
             // Keep listening to the InputStream while connected
+            try {
+                objectOutputStream= new ObjectOutputStream(mmOutStream);
+                objectInputStream=new ObjectInputStream(mmInStream);
+            } catch (IOException e) {
+                connectionLost();
+                e.printStackTrace();
+            }
             while (true) {
                 try {
-                    byte[] s;
-                    if (objectInputStream == null) {
-                        System.out.println("objectInputStream == null");
+                    SendedData s;
+                    if (objectOutputStream == null) {
                         return;
                     }
                     Object o = objectInputStream.readUnshared();
                     if (o == null)
                         return;
                     else
-                        s = (byte[]) o;
+                        s = (SendedData) o;
                     mMessageListener.messageReceived(s);
-                    //objectInputStream.reset();
+                    //objectOutputStream.reset();
 
-                } catch (ClassNotFoundException | IOException e) {
-//                    Log.e(TAG, "disconnected", e);
+                } catch (Exception e2) {
                     connectionLost();
                     break;
                 }
@@ -327,8 +258,10 @@ public class BluetoothReceive {
         void cancel() {
             try {
                 mHandler=null;
-                mmOutStream.write(EXIT_CMD);
-                mmSocket.close();
+                objectOutputStream.write(EXIT_CMD);
+                if(mmSocket!=null){
+                    mmSocket.close();
+                }
             } catch (IOException e) {
 //                Log.e(TAG, "close() of connect socket failed", e);
             }
@@ -336,6 +269,6 @@ public class BluetoothReceive {
     }
 
     public interface OnMessageReceived {
-        void messageReceived(byte[] message);
+        void messageReceived(SendedData message);
     }
 }

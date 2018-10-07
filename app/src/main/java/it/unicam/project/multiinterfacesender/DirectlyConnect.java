@@ -29,6 +29,7 @@ import android.support.design.widget.Snackbar;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentManager;
 import android.support.v4.content.ContextCompat;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.ProgressBar;
@@ -40,6 +41,7 @@ import java.lang.reflect.Method;
 import java.util.List;
 import java.util.Set;
 
+import it.unicam.project.multiinterfacesender.Send.Send_loading;
 import it.unicam.project.multiinterfacesender.Send.Send_step_2;
 import it.unicam.project.multiinterfacesender.Service.BluetoothSend;
 import it.unicam.project.multiinterfacesender.Service.MobileSend;
@@ -61,25 +63,28 @@ public class DirectlyConnect {
     private FragmentManager fm;
     private AlertDialog alertdialog;
     //Connection
-    private BluetoothSend bluetoothSendService;
+    public static BluetoothSend bluetoothSendService;
     private WifiManager wifiManager;
     private boolean foundBTdevice;
     private int currentStep;
-    private int skippedInterface;
+    private int skippableInterfaces;
     private boolean alreadyPaired;
     private final String serverIp="35.180.118.235";
     private final int mobileport=3306;
     private final int wifiport = 50000;
     private boolean wifiHandlerRegistered=false;
     private boolean btHandlerRegistered=false;
+    public static boolean usingWifi;
+    public static boolean usingBluetooth;
+    public static boolean usingMobile;
     //AIDL stuff
     public static ServiceConnection wifiServiceConnection;
     public static ServiceConnection mobileServiceConnection;
     public static int wifiProcessID;
     public static int mobileProcessID;
-    private static IService_App_to_Wifi iService_app_to_wifi;
+    public static IService_App_to_Wifi iService_app_to_wifi;
     private IService_Wifi_to_App iService_wifi_to_app;
-    private static IService_App_to_Mobile iService_app_to_mobile;
+    public static IService_App_to_Mobile iService_app_to_mobile;
     private IService_Mobile_to_App iService_mobile_to_app;
     private volatile boolean wifi_connectionCreated=false;
     private volatile boolean wifi_connectionEstablished=false;
@@ -93,19 +98,20 @@ public class DirectlyConnect {
         @Override
         public void handleMessage(Message msg) {
             switch (msg.what) {
-                case BT_MESSAGE_STATE_CHANGE:
+                case BT_SEND_MESSAGE_STATE_CHANGE:
                     switch (msg.arg1) {
-                        case BluetoothSend.BT_STATE_CONNECTED:
+                        case BluetoothSend.BT_SEND_STATE_CONNECTED:
                             btHandlerRegistered=false;
                             checkStep3();
                             break;
-                        case BluetoothSend.BT_STATE_NOT_FOUND:
+                        case BluetoothSend.BT_SEND_STATE_NOT_FOUND:
                             handleSomethingWrong("Disposito bluetooth non raggiungibile");
                             break;
-                        case BluetoothSend.BT_STATE_LOST_CONNECTION:
-                            myActivity.unregisterReceiver(bluetoothReceiver);
-                            skippedInterface+=1;
-                            if(skippedInterface==3){
+                        case BluetoothSend.BT_SEND_STATE_LOST_CONNECTION:
+                            if(btHandlerRegistered)myActivity.unregisterReceiver(bluetoothReceiver);
+                            skippableInterfaces-=1;
+                            if(skippableInterfaces==0){
+                                //Send_loading.mHandler.sendMessage()
                                 currentFragment.getActivity().getSupportFragmentManager().popBackStack();
                                 MainActivity.snackBarNav(myActivity, R.id.send_container, "Persa la con il dispositivo bluetooth. " +
                                         "Non ci sono altre interfacce da utilizzare. Connessione annullata", Snackbar.LENGTH_LONG, 0);
@@ -245,22 +251,24 @@ public class DirectlyConnect {
         alertDialogBuilder.setCancelable(false);
         alertdialog = alertDialogBuilder.create();
         alertdialog.show();
-        this.skippedInterface=0;
+        this.skippableInterfaces=3;
         for (int i=0; i<3; i++){
             switch (i){
-                case 0: if(btname==null) skippedInterface+=1;
+                case 0: if(btname==null) skippableInterfaces-=1;
                 break;
-                case 1: if(wifiip==null) skippedInterface+=1;
+                case 1: if(wifiip==null) skippableInterfaces-=1;
                 break;
-                case 2: if(!mobileconnection) skippedInterface+=1;
+                case 2: if(!mobileconnection) skippableInterfaces-=1;
             }
         }
+        Log.e("SKIPPABLE", String.valueOf(skippableInterfaces));
         checkStep1();
     }
 
     public void checkStep1() {
         //WifiSend
         if (wifiSSID != null) {
+            usingWifi=true;
             currentStep=1;
             progress.setVisibility(View.VISIBLE);
             retryText.setVisibility(View.INVISIBLE);
@@ -349,8 +357,8 @@ public class DirectlyConnect {
                                 @Override
                                 public void run() {
                                     wifi_connectionRefused=true;
-                                    skippedInterface+=1;
-                                    if(skippedInterface==3){
+                                    skippableInterfaces-=1;
+                                    if(skippableInterfaces ==0){
                                         currentFragment.getActivity().getSupportFragmentManager().popBackStack();
                                         MainActivity.snackBarNav(myActivity, R.id.send_container, "Persa la con il dispositivo in wifi. " +
                                                 "Non ci sono altre interfacce da utilizzare. Connessione annullata", Snackbar.LENGTH_LONG, 0);
@@ -421,6 +429,7 @@ public class DirectlyConnect {
         //BluetoothSend
         if (btname != null) {
             currentStep=2;
+            usingBluetooth=true;
             IntentFilter filter = new IntentFilter();
             filter.addAction(BluetoothDevice.ACTION_FOUND);
             filter.addAction(BluetoothAdapter.ACTION_DISCOVERY_FINISHED);
@@ -510,13 +519,24 @@ public class DirectlyConnect {
             @Override
             public void onClick(View view) {
                 if(currentStep==1){
+                    usingWifi=false;
                     if(wifiHandlerRegistered) myActivity.unregisterReceiver(wifiReceiver);
                     if(avoidConnection()) return;
                     checkStep2();
-                } else {
+                } else if(currentStep==2) {
+                    usingBluetooth=false;
                     if(btHandlerRegistered) myActivity.unregisterReceiver(bluetoothReceiver);
                     if(avoidConnection()) return;
                     checkStep3();
+                } else {
+                    usingMobile=false;
+                    if(avoidConnection()) return;
+                    alertdialog.dismiss();
+                    fm.beginTransaction()
+                            .setCustomAnimations(R.anim.enter_from_right, R.anim.exit_to_left, R.anim.enter_from_left, R.anim.exit_to_right)
+                            .replace(R.id.send_container, new Send_step_2(), "Send_step_2")
+                            .addToBackStack(null)
+                            .commit();
                 }
             }
         });
@@ -535,6 +555,7 @@ public class DirectlyConnect {
         //MobileSend
         if (mobileconnection) {
             currentStep=3;
+            usingMobile=true;
             progress.setVisibility(View.VISIBLE);
             stepmessage.setText("Sto verificando che i tuoi dati mobili siano attivi ");
             retryText.setVisibility(View.INVISIBLE);
@@ -573,6 +594,7 @@ public class DirectlyConnect {
                                         @Override
                                         public void onClick(View view) {
                                             if(avoidConnection()) return;
+                                            usingMobile=false;
                                             alertdialog.dismiss();
                                             fm.beginTransaction()
                                                     .setCustomAnimations(R.anim.enter_from_right, R.anim.exit_to_left, R.anim.enter_from_left, R.anim.exit_to_right)
@@ -623,7 +645,7 @@ public class DirectlyConnect {
                                 myActivity.runOnUiThread(new Runnable() {
                                     @Override
                                     public void run() {
-                                        handleSomethingWrong("Non sono stato in grado di connettermi al dispositivo");
+                                        handleSomethingWrong("Non sono stato in grado di connettermi al dispositivo attraverso il server");
                                     }
                                 });
                                 break;
@@ -632,8 +654,8 @@ public class DirectlyConnect {
                                     @Override
                                     public void run() {
                                         mobile_connectionRefused=true;
-                                        skippedInterface+=1;
-                                        if(skippedInterface==3){
+                                        skippableInterfaces-=1;
+                                        if(skippableInterfaces ==0){
                                             currentFragment.getActivity().getSupportFragmentManager().popBackStack();
                                             MainActivity.snackBarNav(myActivity, R.id.send_container, "Persa la connessione con il server. " +
                                                     "Non ci sono altre interfacce da utilizzare. Connessione annullata", Snackbar.LENGTH_LONG, 0);
@@ -707,8 +729,8 @@ public class DirectlyConnect {
         }
     }
     private boolean avoidConnection(){
-        skippedInterface+=1;
-        if(skippedInterface==3){
+        skippableInterfaces-=1;
+        if(skippableInterfaces ==0){
             alertdialog.dismiss();
             MainActivity.snackBarNav(myActivity, R.id.send_container, "Connessione annullata", Snackbar.LENGTH_SHORT, 0);
             return true;

@@ -1,6 +1,7 @@
 package it.unicam.project.multiinterfacesender.Receive;
 
 
+import android.annotation.SuppressLint;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
@@ -8,6 +9,7 @@ import android.content.ServiceConnection;
 import android.os.Build;
 import android.os.Handler;
 import android.os.IBinder;
+import android.os.Message;
 import android.os.RemoteException;
 import android.support.design.widget.Snackbar;
 import android.support.v4.content.ContextCompat;
@@ -16,6 +18,7 @@ import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import it.unicam.project.multiinterfacesender.IService_App_to_Mobile;
 import it.unicam.project.multiinterfacesender.IService_App_to_Wifi;
@@ -23,8 +26,13 @@ import it.unicam.project.multiinterfacesender.IService_Mobile_to_App;
 import it.unicam.project.multiinterfacesender.IService_Wifi_to_App;
 import it.unicam.project.multiinterfacesender.MainActivity;
 import it.unicam.project.multiinterfacesender.R;
+import it.unicam.project.multiinterfacesender.Service.BluetoothReceive;
+import it.unicam.project.multiinterfacesender.Service.BluetoothSend;
 import it.unicam.project.multiinterfacesender.Service.MobileReceive;
 import it.unicam.project.multiinterfacesender.Service.WifiReceive;
+
+import static it.unicam.project.multiinterfacesender.Service.BluetoothReceive.BT_RECEIVE_MESSAGE_STATE_CHANGE;
+import static it.unicam.project.multiinterfacesender.Service.BluetoothSend.BT_SEND_MESSAGE_STATE_CHANGE;
 
 
 public class Receive_loading extends AppCompatActivity {
@@ -64,6 +72,32 @@ public class Receive_loading extends AppCompatActivity {
     private volatile boolean mobile_connectionRefused=false;
     private int wifiProcessID;
     private int mobileProcessID;
+    @SuppressLint("HandlerLeak")
+    private Handler mHandler = new Handler() {
+        @Override
+        public void handleMessage(Message msg) {
+            switch (msg.what) {
+                case BT_RECEIVE_MESSAGE_STATE_CHANGE:
+                    switch (msg.arg1) {
+                        case BluetoothReceive.BT_RECEIVE_STATE_CONNECTED:
+                            Log.e("BT STATE", "CONNECTED");
+                            setMessage("Connessione Bluetooth stabilita");
+                            break;
+                        case BluetoothReceive.BT_RECEIVE_STATE_ERROR:
+                            setMessage("C'è stato un problema con la connessione Bluetooth");
+                            Log.e("BT STATE", "ERROR");
+                            lostInterface();
+                            break;
+                        case BluetoothReceive.BT_RECEIVE_STATE_LOST_CONNECTION:
+                            lostInterface();
+                            Log.e("BT STATE", "LOST CONNECTION");
+                            setMessage("Ho perso la connessione con il dispositivo Bluetooth");
+                            break;
+                    }
+                    break;
+            }
+        }
+    };
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -114,6 +148,18 @@ public class Receive_loading extends AppCompatActivity {
         if(usingMobile){
             startReceivingOnMobile();
         }
+        if(usingBluetooth){
+            BluetoothReceive btReceive= new BluetoothReceive(mHandler, new BluetoothReceive.OnMessageReceived() {
+                @Override
+                public void messageReceived(SendedData message) {
+                    //RICEVO SENDWDDATA DA SENDER
+
+                    //message.fileName; se diverso da null salvalo
+                    //message.fileChunk;
+                }
+            });
+            btReceive.connect();
+        }
     }
 
     public void startReceivingOnWifi(){
@@ -137,6 +183,7 @@ public class Receive_loading extends AppCompatActivity {
                                     @Override
                                     public void run() {
                                         wifi_connectionRefused=true;
+                                        lostInterface();
                                         setMessage("Ho perso la connessione con il dispositivo in WiFi");
                                     }
                                 });
@@ -214,7 +261,8 @@ public class Receive_loading extends AppCompatActivity {
                                 runOnUiThread(new Runnable() {
                                     @Override
                                     public void run() {
-                                        setMessage("Non sono riuscito a connettermi con il server");
+                                        lostInterface();
+                                        setMessage("Non sono riuscito a connettermi al server");
                                     }
                                 });
                                 break;
@@ -223,6 +271,7 @@ public class Receive_loading extends AppCompatActivity {
                                     @Override
                                     public void run() {
                                         mobile_connectionRefused=true;
+                                        lostInterface();
                                         setMessage("Ho perso la connessione con il dispositivo sulla rete mobile");
                                     }
                                 });
@@ -300,6 +349,14 @@ public class Receive_loading extends AppCompatActivity {
         });
     }
 
+    public void lostInterface(){
+        numberOfUsedInterface-=1;
+        if(numberOfUsedInterface==0){
+            doubleSkip=true;
+            onBackPressed();
+        }
+    }
+
     public void setDownloadingView(boolean comesFromManual, String downloadingFileName){
         //Making downloading file visible
         if(comesFromManual){
@@ -337,10 +394,11 @@ public class Receive_loading extends AppCompatActivity {
     }
 
     boolean doubleBackToExitPressedOnce = false;
+    boolean doubleSkip=false;
 
     @Override
     public void onBackPressed() {
-        if (doubleBackToExitPressedOnce) {
+        if (doubleBackToExitPressedOnce || doubleSkip) {
             if(usingWifi){
                 try {
                     iService_app_to_wifi.disconnect();
@@ -358,6 +416,12 @@ public class Receive_loading extends AppCompatActivity {
                 }
                 unbindService(mobileServiceConnection);
                 android.os.Process.killProcess(mobileProcessID);
+            }
+            if(usingBluetooth){
+                BluetoothReceive.clear();
+            }
+            if(doubleSkip) {
+                Toast.makeText(this, "Tutte le interfacce si sono disconnesse. Connessione annullata", Toast.LENGTH_SHORT).show();
             }
             super.onBackPressed();
             return;

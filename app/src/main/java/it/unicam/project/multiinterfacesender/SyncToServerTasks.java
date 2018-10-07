@@ -219,6 +219,7 @@ public class SyncToServerTasks {
             try {
                 json.put("utoken", userToken);
                 json.put("devicename", devicename);
+                json.put("is_PC", false);
             } catch (JSONException e1) {
                 e1.printStackTrace();
                 return null;
