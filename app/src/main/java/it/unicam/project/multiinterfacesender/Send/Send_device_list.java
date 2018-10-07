@@ -46,10 +46,12 @@ public class Send_device_list extends Fragment {
     protected ArrayList<Device> deviceList= new ArrayList<>();
     private Thread serverTask;
     private SwipeRefreshLayout refreshDevices;
+    private String devicename;
 
     public interface DataCommunication {
         public void setChoosenDevice(String ID);
         public String getUToken();
+        public String getDeviceName();
     }
 
     private DataCommunication mListener;
@@ -84,6 +86,7 @@ public class Send_device_list extends Fragment {
             mParam2 = getArguments().getString(ARG_PARAM2);
         }
         uToken= mListener.getUToken();
+        devicename= mListener.getDeviceName();
         inflater = (LayoutInflater) getActivity().getSystemService(Context.LAYOUT_INFLATER_SERVICE);
     }
 
@@ -143,11 +146,13 @@ public class Send_device_list extends Fragment {
         private String name;
         private boolean pc;
         private boolean status;
+        private String dToken;
         private View view;
-        public Device(String name, boolean pc, boolean status) {
+        public Device(String name, boolean pc, boolean status, String dToken) {
             this.name=name;
             this.pc=pc;
             this.status= status;
+            this.dToken=dToken;
             deviceList.add(this);
         }
         public void setView(View view){ this.view=view; }
@@ -172,9 +177,12 @@ public class Send_device_list extends Fragment {
                             for(int i=0; i<devices.length(); i++){
                                 JSONObject device= (JSONObject) devices.get(i);
                                 String name= device.getString("Name");
-                                boolean isPc= device.getBoolean("Is_Pc");
-                                boolean isActive= device.getBoolean("Status");
-                                new Device(name, isPc, isActive);
+                                if(!name.equals(devicename)){
+                                    String dToken= device.getString("DToken");
+                                    boolean isPc= device.getBoolean("Is_Pc");
+                                    boolean isActive= device.getBoolean("Status");
+                                    new Device(name, isPc, isActive, dToken);
+                                }
                             }
                             getActivity().runOnUiThread(new Runnable() {
                                 @Override
@@ -242,20 +250,32 @@ public class Send_device_list extends Fragment {
                 deviceImageType.setImageResource(R.drawable.send_icon_pc);
             } else deviceImageType.setImageResource(R.drawable.send_icon_mobile);
             final CardView deviceCard= (CardView) tempView.findViewById(R.id.base_device);
-            deviceCard.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View view) {
-                    deviceCard.setCardBackgroundColor(getResources().getColor(R.color.card_selected_background));
-                    choosenDeviceName= temp.getName();
-                    for(int i=0; i<deviceList.size(); i++){
-                        Device temp2= deviceList.get(i);
-                        if(temp!=temp2){
-                            CardView tempCard= (CardView) temp2.view.findViewById(R.id.base_device);
-                            tempCard.setCardBackgroundColor(getResources().getColor(android.R.color.white));
+            if(!temp.status){
+                deviceCard.setCardBackgroundColor(getResources().getColor(R.color.card_selected_disabled));
+                deviceCard.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View view) {
+                        MainActivity.snackBarNav(getActivity(), R.id.send_container,
+                                "Il dispositivo sembra essere offline", Snackbar.LENGTH_SHORT, 0);
+                    }
+                });
+            } else {
+                deviceCard.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View view) {
+                        deviceCard.setCardBackgroundColor(getResources().getColor(R.color.card_selected_background));
+                        choosenDeviceName= temp.getName();
+                        for(int i=0; i<deviceList.size(); i++){
+                            Device temp2= deviceList.get(i);
+                            if(temp!=temp2){
+                                CardView tempCard= (CardView) temp2.view.findViewById(R.id.base_device);
+                                tempCard.setCardBackgroundColor(getResources().getColor(android.R.color.white));
+                            }
                         }
                     }
-                }
-            });
+                });
+            }
+
             refreshDevices.setRefreshing(false);
             deviceListLayout.addView(tempView);
         }
