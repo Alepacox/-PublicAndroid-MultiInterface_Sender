@@ -14,16 +14,22 @@ import android.os.RemoteException;
 import android.support.annotation.Nullable;
 import android.util.Log;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.ObjectInput;
 import java.io.ObjectInputStream;
+import java.io.ObjectOutput;
 import java.io.ObjectOutputStream;
 import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.UnknownHostException;
+import java.util.ArrayList;
 
 import it.unicam.project.multiinterfacesender.IService_App_to_Wifi;
 import it.unicam.project.multiinterfacesender.IService_Wifi_to_App;
+import it.unicam.project.multiinterfacesender.Receive.SendedData;
 
 public class WifiReceive extends Service {
 
@@ -100,15 +106,18 @@ public class WifiReceive extends Service {
                     connectionEstablished();
                     while (keepAlive) {
                         try {
-                            if(objectInputStream.read()==-1){
+                            sendRecievedData((SendedData) objectInputStream.readUnshared());
+                            /*if(objectInputStream.read()==-1){
                                 connectionClosed();
                                 disconnect();
                                 keepAlive=false;
-                            }
+                            }*/
                         } catch (IOException e) {
                             connectionClosed();
                             disconnect();
-                            keepAlive=false;
+                            keepAlive = false;
+                        } catch (ClassNotFoundException | RemoteException e) {
+                            e.printStackTrace();
                         }
                         try {
                             Thread.sleep(3000);
@@ -199,5 +208,73 @@ public class WifiReceive extends Service {
                 e.printStackTrace();
             }
         });
+    }
+
+
+    private void sendRecievedData(SendedData data) throws RemoteException {
+        ArrayList<byte[]> back = splitByteArray(serialize(data), 399860);
+        for (byte[] b : back)
+            WifiReceive.this.iService_wifi_to_app.setupPackage(b);
+        WifiReceive.this.iService_wifi_to_app.packageComplete();
+    }
+
+    public ArrayList<byte[]> splitByteArray(byte[] input, int chunkSize) {
+        int chunkCount = 0;
+        ArrayList<byte[]> res = new ArrayList<>();
+        while ((chunkCount * chunkSize) < input.length) {
+            byte[] chunk;
+            if (((chunkCount * chunkSize) + (chunkSize)) > input.length) {
+                chunk = new byte[input.length - (chunkCount * chunkSize)];
+                System.arraycopy(input, chunkCount * chunkSize, chunk, 0, input.length - (chunkCount * chunkSize));
+            } else {
+                chunk = new byte[chunkSize];
+                System.arraycopy(input, chunkCount * chunkSize, chunk, 0, chunkSize);
+            }
+            res.add(chunk);
+            chunkCount++;
+        }
+        return res;
+    }
+
+    public byte[] serialize(SendedData in) {
+        byte[] out = null;
+        ByteArrayOutputStream bos = new ByteArrayOutputStream();
+        ObjectOutput objOut;
+        try {
+            objOut = new ObjectOutputStream(bos);
+            objOut.writeObject(in);
+            objOut.flush();
+            out = bos.toByteArray();
+        } catch (IOException e) {
+            e.printStackTrace();
+        } finally {
+            try {
+                bos.close();
+            } catch (IOException ex) {
+                // ignore close exception
+            }
+        }
+        return out;
+    }
+
+    public SendedData deSerialize(byte[] in) {
+        SendedData out = null;
+        ByteArrayInputStream bis = new ByteArrayInputStream(in);
+        ObjectInput objIn = null;
+        try {
+            objIn = new ObjectInputStream(bis);
+            out = (SendedData) objIn.readObject();
+        } catch (ClassNotFoundException | IOException e) {
+            e.printStackTrace();
+        } finally {
+            try {
+                if (objIn != null) {
+                    objIn.close();
+                }
+            } catch (IOException ex) {
+                // ignore close exception
+            }
+        }
+        return out;
     }
 }

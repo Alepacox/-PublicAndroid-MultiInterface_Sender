@@ -373,6 +373,16 @@ public class DirectlyConnect {
                     public void getProcessID(int code) throws RemoteException {
                         wifiProcessID=code;
                     }
+
+                    @Override
+                    public void setupPackage(byte[] data) throws RemoteException {
+
+                    }
+
+                    @Override
+                    public void packageComplete() throws RemoteException {
+
+                    }
                 };
                 try {
                     iService_app_to_wifi.register(iService_wifi_to_app);
@@ -670,6 +680,16 @@ public class DirectlyConnect {
                     @Override
                     public void getProcessID(int code) throws RemoteException {
                         mobileProcessID=code;
+                    }
+
+                    @Override
+                    public void setupPackage(byte[] data) throws RemoteException {
+
+                    }
+
+                    @Override
+                    public void packageComplete() throws RemoteException {
+
                     }
                 };
                 try {

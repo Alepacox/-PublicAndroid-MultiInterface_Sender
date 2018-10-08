@@ -20,6 +20,15 @@ import android.view.View;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import java.io.ByteArrayInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.ObjectInput;
+import java.io.ObjectInputStream;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Comparator;
+
 import it.unicam.project.multiinterfacesender.IService_App_to_Mobile;
 import it.unicam.project.multiinterfacesender.IService_App_to_Wifi;
 import it.unicam.project.multiinterfacesender.IService_Mobile_to_App;
@@ -27,12 +36,10 @@ import it.unicam.project.multiinterfacesender.IService_Wifi_to_App;
 import it.unicam.project.multiinterfacesender.MainActivity;
 import it.unicam.project.multiinterfacesender.R;
 import it.unicam.project.multiinterfacesender.Service.BluetoothReceive;
-import it.unicam.project.multiinterfacesender.Service.BluetoothSend;
 import it.unicam.project.multiinterfacesender.Service.MobileReceive;
 import it.unicam.project.multiinterfacesender.Service.WifiReceive;
 
 import static it.unicam.project.multiinterfacesender.Service.BluetoothReceive.BT_RECEIVE_MESSAGE_STATE_CHANGE;
-import static it.unicam.project.multiinterfacesender.Service.BluetoothSend.BT_SEND_MESSAGE_STATE_CHANGE;
 
 
 public class Receive_loading extends AppCompatActivity {
@@ -48,30 +55,35 @@ public class Receive_loading extends AppCompatActivity {
     private TextView mobileStatus;
     private TextView mobileStatusText;
     private boolean blocked;
-    private int numberOfUsedInterface=0;
+    private int numberOfUsedInterface = 0;
     private boolean usingWifi;
     private boolean usingMobile;
     private boolean usingBluetooth;
     private String wifiIp;
     private String bluetoothName;
     //AIDL stuff
-    private final String serverIp="35.180.118.235";
-    private final int mobileport=3306;
-    private int port= 50000;
+    private final String serverIp = "35.180.118.235";
+    private final int mobileport = 3306;
+    private int port = 50000;
     private ServiceConnection wifiServiceConnection;
     private IService_App_to_Wifi iService_app_to_wifi;
     private IService_Wifi_to_App iService_wifi_to_app;
     private ServiceConnection mobileServiceConnection;
     private IService_App_to_Mobile iService_app_to_mobile;
     private IService_Mobile_to_App iService_mobile_to_app;
-    private volatile boolean wifi_connectionCreated=false;
-    private volatile boolean wifi_connectionEstablished=false;
-    private volatile boolean wifi_connectionRefused=false;
-    private volatile boolean mobile_connectionCreated=false;
-    private volatile boolean mobile_connectionEstablished=false;
-    private volatile boolean mobile_connectionRefused=false;
+    private volatile boolean wifi_connectionCreated = false;
+    private volatile boolean wifi_connectionEstablished = false;
+    private volatile boolean wifi_connectionRefused = false;
+    private volatile boolean mobile_connectionCreated = false;
+    private volatile boolean mobile_connectionEstablished = false;
+    private volatile boolean mobile_connectionRefused = false;
     private int wifiProcessID;
     private int mobileProcessID;
+
+    private String received_FileName;
+    private ArrayList<CacheElement> chunks = new ArrayList<>();
+    private boolean bt_trans_done = true, wf_trans_done = true, mo_trans_done = true;
+
     @SuppressLint("HandlerLeak")
     private Handler mHandler = new Handler() {
         @Override
@@ -110,79 +122,95 @@ public class Receive_loading extends AppCompatActivity {
                     R.color.receivePrimaryColor));
         }
         Intent intent = getIntent();
-        boolean manual= intent.getBooleanExtra("receivingManual", true);
+        boolean manual = intent.getBooleanExtra("receivingManual", true);
         wifiIp = intent.getStringExtra("wifiIp");
         bluetoothName = intent.getStringExtra("bluetoothName");
         usingMobile = Boolean.valueOf(intent.getStringExtra("mobileIp"));
-        if(usingMobile) numberOfUsedInterface+=1;
+        if (usingMobile) numberOfUsedInterface += 1;
         localAddress = findViewById(R.id.downloading_ip_local);
         bluetoothAddress = findViewById(R.id.downloading_bluetooth);
         mobileStatus = findViewById(R.id.downloading_remote_status);
         localAddressText = findViewById(R.id.downloading_ip_local_text);
         bluetoothAddressText = findViewById(R.id.downloading_bluetooth_text);
         mobileStatusText = findViewById(R.id.downloading_mobile_text);
-        textGeneratedCode= findViewById(R.id.session_code_text);
-        shareSession= findViewById(R.id.text_share_session);
-        generatedCode= findViewById(R.id.session_code);
+        textGeneratedCode = findViewById(R.id.session_code_text);
+        shareSession = findViewById(R.id.text_share_session);
+        generatedCode = findViewById(R.id.session_code);
         downloadingFileText = findViewById(R.id.downloading_filename_text);
         downloadingFile = findViewById(R.id.downloading_filename);
-        blocked=true;
+        blocked = true;
         if (!wifiIp.equals("null")) {
-            usingWifi=true;
-            numberOfUsedInterface+=1;
-        } else usingWifi=false;
+            usingWifi = true;
+            numberOfUsedInterface += 1;
+        } else usingWifi = false;
         if (!bluetoothName.equals("null")) {
-            usingBluetooth=true;
-            numberOfUsedInterface+=1;
-        }else usingBluetooth=false;
+            usingBluetooth = true;
+            numberOfUsedInterface += 1;
+        } else usingBluetooth = false;
 
-        if(manual) {
+        if (manual) {
             setManualView();
         } else {
-            String sessionCode= intent.getStringExtra("sessioncode");
+            String sessionCode = intent.getStringExtra("sessioncode");
             setAutoView(sessionCode);
         }
-        if(usingWifi){
+        if (usingWifi) {
+            wf_trans_done = false;
             startReceivingOnWifi();
         }
-        if(usingMobile){
+        if (usingMobile) {
+            mo_trans_done = false;
             startReceivingOnMobile();
         }
-        if(usingBluetooth){
-            BluetoothReceive btReceive= new BluetoothReceive(mHandler, new BluetoothReceive.OnMessageReceived() {
+        if (usingBluetooth) {
+            bt_trans_done = false;
+            BluetoothReceive btReceive = new BluetoothReceive(mHandler, new BluetoothReceive.OnMessageReceived() {
                 @Override
                 public void messageReceived(SendedData message) {
-                    //RICEVO SENDWDDATA DA SENDER
+                    if (message.fileName != null && message.fileName != "")
+                        received_FileName = message.fileName;
 
-                    //message.fileName; se diverso da null salvalo
-                    //message.fileChunk;
+                    //non abbiamo ram infinita,  quindi c'è da scrivere sti pezzi di file a parte e salvarsi solo il ref,
+                    //poi alla scrittura si prende un pezzo alla volta e si mette nel file finale eliminando sti pezzi uno a uno una volta scritti
+                    if (message.fileChunk != new byte[0] && message.fileChunk != null)
+                        chunks.add(new CacheElement(
+                                Arrays.copyOfRange(message.fileChunk, 0, message.fileChunk.length - 2),
+                                Arrays.copyOfRange(message.fileChunk, message.fileChunk.length - 2, message.fileChunk.length)
+                        ));
+
+                    if (message.fileChunk == new byte[0]) {
+                        bt_trans_done = true;
+                        tryWriteFile();
+                    }
                 }
             });
             btReceive.connect();
         }
     }
 
-    public void startReceivingOnWifi(){
-        Intent wifiIntent= new Intent(this, WifiReceive.class);
-        wifiServiceConnection= new ServiceConnection() {
+
+    private byte[] wifiTMP;
+    public void startReceivingOnWifi() {
+        Intent wifiIntent = new Intent(this, WifiReceive.class);
+        wifiServiceConnection = new ServiceConnection() {
             @Override
             public void onServiceConnected(ComponentName componentName, IBinder iBinder) {
                 iService_app_to_wifi = IService_App_to_Wifi.Stub.asInterface(iBinder);
                 iService_wifi_to_app = new IService_Wifi_to_App.Stub() {
                     @Override
                     public void wifiHandler(int code) throws RemoteException {
-                        switch (code){
+                        switch (code) {
                             case 11:
-                                wifi_connectionCreated=true;
+                                wifi_connectionCreated = true;
                                 break;
                             case 12:
-                                wifi_connectionEstablished=true;
+                                wifi_connectionEstablished = true;
                                 break;
                             case 14:
                                 runOnUiThread(new Runnable() {
                                     @Override
                                     public void run() {
-                                        wifi_connectionRefused=true;
+                                        wifi_connectionRefused = true;
                                         lostInterface();
                                         setMessage("Ho perso la connessione con il dispositivo in WiFi");
                                     }
@@ -192,7 +220,42 @@ public class Receive_loading extends AppCompatActivity {
 
                     @Override
                     public void getProcessID(int code) throws RemoteException {
-                        wifiProcessID=code;
+                        wifiProcessID = code;
+                    }
+
+                    @Override
+                    public void setupPackage(byte[] data) throws RemoteException {
+                        if (wifiTMP == null) {
+                            wifiTMP = data;
+                        } else {
+                            byte[] res = new byte[wifiTMP.length + data.length];
+                            System.arraycopy(wifiTMP, 0, res, 0, wifiTMP.length);
+                            System.arraycopy(data, 0, res, wifiTMP.length, data.length);
+                            wifiTMP = res;
+                        }
+                    }
+
+                    @Override
+                    public void packageComplete() throws RemoteException {
+                        SendedData message = deSerialize(wifiTMP);
+                        wifiTMP = null;
+
+                        if (message.fileName != null && message.fileName != "")
+                            received_FileName = message.fileName;
+
+                        //non abbiamo ram infinita,  quindi c'è da scrivere sti pezzi di file a parte e salvarsi solo il ref,
+                        //poi alla scrittura si prende un pezzo alla volta e si mette nel file finale eliminando sti pezzi uno a uno una volta scritti
+                        if (message.fileChunk != new byte[0] && message.fileChunk != null)
+                            chunks.add(new CacheElement(
+                                    Arrays.copyOfRange(message.fileChunk, 0, message.fileChunk.length - 2),
+                                    Arrays.copyOfRange(message.fileChunk, message.fileChunk.length - 2, message.fileChunk.length)
+                            ));
+
+                        if (message.fileChunk == new byte[0]) {
+                            wf_trans_done = true;
+                            tryWriteFile();
+                        }
+
                     }
                 };
                 try {
@@ -201,7 +264,7 @@ public class Receive_loading extends AppCompatActivity {
                         try {
                             iService_app_to_wifi.createConnection(null, port);
                             while (!wifi_connectionCreated) {
-                                if(wifi_connectionRefused) return;
+                                if (wifi_connectionRefused) return;
                                 try {
                                     Thread.sleep(50);
                                 } catch (InterruptedException e) {
@@ -210,7 +273,7 @@ public class Receive_loading extends AppCompatActivity {
                             }
                             iService_app_to_wifi.connect();
                             while (!wifi_connectionEstablished) {
-                                if(wifi_connectionRefused) return;
+                                if (wifi_connectionRefused) return;
                                 try {
                                     Thread.sleep(50);
                                 } catch (InterruptedException e) {
@@ -220,7 +283,7 @@ public class Receive_loading extends AppCompatActivity {
                             runOnUiThread(new Runnable() {
                                 @Override
                                 public void run() {
-                                    if(wifi_connectionRefused) return;
+                                    if (wifi_connectionRefused) return;
                                     setMessage("Connesso al dispositivo in WiFi");
                                 }
                             });
@@ -232,6 +295,7 @@ public class Receive_loading extends AppCompatActivity {
                     e.printStackTrace();
                 }
             }
+
             @Override
             public void onServiceDisconnected(ComponentName componentName) {
             }
@@ -240,24 +304,25 @@ public class Receive_loading extends AppCompatActivity {
         startService(wifiIntent);
     }
 
-    public void startReceivingOnMobile(){
-        Intent mobileIntent= new Intent(this, MobileReceive.class);
-        mobileServiceConnection= new ServiceConnection() {
+    private byte[] mobileTMP;
+    public void startReceivingOnMobile() {
+        Intent mobileIntent = new Intent(this, MobileReceive.class);
+        mobileServiceConnection = new ServiceConnection() {
             @Override
             public void onServiceConnected(ComponentName componentName, IBinder iBinder) {
                 iService_app_to_mobile = IService_App_to_Mobile.Stub.asInterface(iBinder);
                 iService_mobile_to_app = new IService_Mobile_to_App.Stub() {
                     @Override
                     public void mobileHandler(int code) throws RemoteException {
-                        switch (code){
+                        switch (code) {
                             case 11:
-                                mobile_connectionCreated=true;
+                                mobile_connectionCreated = true;
                                 break;
                             case 12:
-                                mobile_connectionEstablished=true;
+                                mobile_connectionEstablished = true;
                                 break;
                             case 13:
-                                mobile_connectionRefused=true;
+                                mobile_connectionRefused = true;
                                 runOnUiThread(new Runnable() {
                                     @Override
                                     public void run() {
@@ -270,7 +335,7 @@ public class Receive_loading extends AppCompatActivity {
                                 runOnUiThread(new Runnable() {
                                     @Override
                                     public void run() {
-                                        mobile_connectionRefused=true;
+                                        mobile_connectionRefused = true;
                                         lostInterface();
                                         setMessage("Ho perso la connessione con il dispositivo sulla rete mobile");
                                     }
@@ -281,7 +346,42 @@ public class Receive_loading extends AppCompatActivity {
 
                     @Override
                     public void getProcessID(int code) throws RemoteException {
-                        mobileProcessID=code;
+                        mobileProcessID = code;
+                    }
+
+                    @Override
+                    public void setupPackage(byte[] data) throws RemoteException {
+                        if (mobileTMP == null) {
+                            mobileTMP = data;
+                        } else {
+                            byte[] res = new byte[mobileTMP.length + data.length];
+                            System.arraycopy(mobileTMP, 0, res, 0, mobileTMP.length);
+                            System.arraycopy(data, 0, res, mobileTMP.length, data.length);
+                            mobileTMP = res;
+                        }
+                    }
+
+                    @Override
+                    public void packageComplete() throws RemoteException {
+                        SendedData message = deSerialize(mobileTMP);
+                        mobileTMP = null;
+
+                        if (message.fileName != null && message.fileName != "")
+                            received_FileName = message.fileName;
+
+                        //non abbiamo ram infinita,  quindi c'è da scrivere sti pezzi di file a parte e salvarsi solo il ref,
+                        //poi alla scrittura si prende un pezzo alla volta e si mette nel file finale eliminando sti pezzi uno a uno una volta scritti
+                        if (message.fileChunk != new byte[0] && message.fileChunk != null)
+                            chunks.add(new CacheElement(
+                                    Arrays.copyOfRange(message.fileChunk, 0, message.fileChunk.length - 2),
+                                    Arrays.copyOfRange(message.fileChunk, message.fileChunk.length - 2, message.fileChunk.length)
+                            ));
+
+                        if (message.fileChunk == new byte[0]) {
+                            mo_trans_done = true;
+                            tryWriteFile();
+                        }
+
                     }
                 };
                 try {
@@ -290,7 +390,7 @@ public class Receive_loading extends AppCompatActivity {
                         try {
                             iService_app_to_mobile.createConnection(serverIp, mobileport);
                             while (!mobile_connectionCreated) {
-                                if(mobile_connectionRefused) return;
+                                if (mobile_connectionRefused) return;
                                 try {
                                     Thread.sleep(50);
                                 } catch (InterruptedException e) {
@@ -299,7 +399,7 @@ public class Receive_loading extends AppCompatActivity {
                             }
                             iService_app_to_mobile.connect();
                             while (!mobile_connectionEstablished) {
-                                if(mobile_connectionRefused) return;
+                                if (mobile_connectionRefused) return;
                                 try {
                                     Thread.sleep(50);
                                 } catch (InterruptedException e) {
@@ -309,7 +409,7 @@ public class Receive_loading extends AppCompatActivity {
                             runOnUiThread(new Runnable() {
                                 @Override
                                 public void run() {
-                                    if(mobile_connectionRefused) return;
+                                    if (mobile_connectionRefused) return;
                                     setMessage("Connesso al dispositivo attraverso la rete mobile.");
                                 }
                             });
@@ -321,6 +421,7 @@ public class Receive_loading extends AppCompatActivity {
                     e.printStackTrace();
                 }
             }
+
             @Override
             public void onServiceDisconnected(ComponentName componentName) {
             }
@@ -329,10 +430,11 @@ public class Receive_loading extends AppCompatActivity {
         startService(mobileIntent);
     }
 
-    public void setMessage(String message){
+    public void setMessage(String message) {
         MainActivity.snackBarNav(this, R.id.container_receive_loading, message, Snackbar.LENGTH_LONG, 1);
     }
-    public void setAutoView(final String sessionCode){
+
+    public void setAutoView(final String sessionCode) {
         textGeneratedCode.setVisibility(View.VISIBLE);
         generatedCode.setVisibility(View.VISIBLE);
         shareSession.setVisibility(View.VISIBLE);
@@ -342,24 +444,24 @@ public class Receive_loading extends AppCompatActivity {
             public void onClick(View view) {
                 Intent sendIntent = new Intent();
                 sendIntent.setAction(Intent.ACTION_SEND);
-                sendIntent.putExtra(Intent.EXTRA_TEXT, "MultiInterface Sender: il mio codice di connessione è "+ sessionCode);
+                sendIntent.putExtra(Intent.EXTRA_TEXT, "MultiInterface Sender: il mio codice di connessione è " + sessionCode);
                 sendIntent.setType("text/plain");
                 startActivity(sendIntent);
             }
         });
     }
 
-    public void lostInterface(){
-        numberOfUsedInterface-=1;
-        if(numberOfUsedInterface==0){
-            doubleSkip=true;
+    public void lostInterface() {
+        numberOfUsedInterface -= 1;
+        if (numberOfUsedInterface == 0) {
+            doubleSkip = true;
             onBackPressed();
         }
     }
 
-    public void setDownloadingView(boolean comesFromManual, String downloadingFileName){
+    public void setDownloadingView(boolean comesFromManual, String downloadingFileName) {
         //Making downloading file visible
-        if(comesFromManual){
+        if (comesFromManual) {
             localAddress.setVisibility(View.INVISIBLE);
             bluetoothAddress.setVisibility(View.INVISIBLE);
             localAddressText.setVisibility(View.INVISIBLE);
@@ -375,14 +477,15 @@ public class Receive_loading extends AppCompatActivity {
         downloadingFileText.setVisibility(View.VISIBLE);
         downloadingFile.setText(downloadingFileName);
     }
-    public void setManualView(){
+
+    public void setManualView() {
         if (usingWifi) {
             localAddress.setText(wifiIp);
         }
         if (usingBluetooth) {
             bluetoothAddress.setText(bluetoothName);
         }
-        if (usingMobile){
+        if (usingMobile) {
             mobileStatus.setText("On");
         }
         localAddress.setVisibility(View.VISIBLE);
@@ -394,12 +497,12 @@ public class Receive_loading extends AppCompatActivity {
     }
 
     boolean doubleBackToExitPressedOnce = false;
-    boolean doubleSkip=false;
+    boolean doubleSkip = false;
 
     @Override
     public void onBackPressed() {
         if (doubleBackToExitPressedOnce || doubleSkip) {
-            if(usingWifi){
+            if (usingWifi) {
                 try {
                     iService_app_to_wifi.disconnect();
                 } catch (RemoteException e) {
@@ -408,7 +511,7 @@ public class Receive_loading extends AppCompatActivity {
                 unbindService(wifiServiceConnection);
                 android.os.Process.killProcess(wifiProcessID);
             }
-            if(usingMobile){
+            if (usingMobile) {
                 try {
                     iService_app_to_mobile.disconnect();
                 } catch (RemoteException e) {
@@ -417,10 +520,10 @@ public class Receive_loading extends AppCompatActivity {
                 unbindService(mobileServiceConnection);
                 android.os.Process.killProcess(mobileProcessID);
             }
-            if(usingBluetooth){
+            if (usingBluetooth) {
                 BluetoothReceive.clear();
             }
-            if(doubleSkip) {
+            if (doubleSkip) {
                 Toast.makeText(this, "Tutte le interfacce si sono disconnesse. Connessione annullata", Toast.LENGTH_SHORT).show();
             }
             super.onBackPressed();
@@ -435,8 +538,93 @@ public class Receive_loading extends AppCompatActivity {
 
             @Override
             public void run() {
-                doubleBackToExitPressedOnce=false;
+                doubleBackToExitPressedOnce = false;
             }
         }, 2000);
+    }
+
+
+    private void tryWriteFile() {
+        if (bt_trans_done && wf_trans_done && mo_trans_done) {
+            bt_trans_done = wf_trans_done = mo_trans_done = false;
+            //SCRIVI FILE SU DISCO
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                chunks.sort(new CacheElementSorter());
+            }else{
+                //sortalo per chi ha android merda < N
+            }
+            FileOutputStream writer;
+            try {
+                writer = new FileOutputStream(received_FileName);
+                for (CacheElement chunk : chunks) {
+                    writer.write(chunk.getFileChunk());
+                }
+                writer.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+            chunks.clear();
+            received_FileName = null;
+        }
+    }
+
+    static class CacheElement {
+        private byte[] fileChunk;
+        private byte[] index;
+
+        CacheElement(byte[] fileChunk, byte[] index) {
+            this.fileChunk = fileChunk;
+            this.index = index;
+        }
+
+        byte[] getFileChunk() {
+            return fileChunk;
+        }
+
+        byte[] getIndex() {
+            return index;
+        }
+    }
+
+    public static class CacheElementSorter implements Comparator<CacheElement> {
+
+        public int compare(CacheElement one, CacheElement another) {
+            int returnVal = 0;
+
+            if (one.getIndex()[0] < another.getIndex()[0])
+                returnVal = -1;
+            else if (one.getIndex()[0] > another.getIndex()[0])
+                returnVal = 1;
+            else if (one.getIndex()[0] == another.getIndex()[0]) {
+                if (one.getIndex()[1] < another.getIndex()[1])
+                    returnVal = -1;
+                else if (one.getIndex()[1] > another.getIndex()[1])
+                    returnVal = 1;
+            }
+            return returnVal;
+
+        }
+    }
+
+    public SendedData deSerialize(byte[] in) {
+        SendedData out = null;
+        ByteArrayInputStream bis = new ByteArrayInputStream(in);
+        ObjectInput objIn = null;
+        try {
+            objIn = new ObjectInputStream(bis);
+            out = (SendedData) objIn.readObject();
+        } catch (ClassNotFoundException | IOException e) {
+            e.printStackTrace();
+        } finally {
+            try {
+                if (objIn != null) {
+                    objIn.close();
+                }
+            } catch (IOException ex) {
+                // ignore close exception
+            }
+        }
+        return out;
     }
 }
